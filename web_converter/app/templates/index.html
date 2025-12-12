@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="page_title">ONNX to C Converter</title>
+    <style>
+        /* Apple-inspired styling */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 10px 0;
+            color: white;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 40px;
+            opacity: 0.9;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .upload-zone {
+            border: 3px dashed #007AFF;
+            border-radius: 15px;
+            padding: 60px 20px;
+            text-align: center;
+            background: #f8f9ff;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .upload-zone:hover {
+            background: #f0f2ff;
+            transform: translateY(-2px);
+        }
+
+        .upload-zone.dragover {
+            background: #e8f4f8;
+            border-color: #34C759;
+        }
+
+        .upload-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, #007AFF, #5856D6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2.5rem;
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #007AFF, #5856D6);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 15px 30px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            margin: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 122, 255, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #34C759, #30D158);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #8E8E93, #6D6D70);
+        }
+
+        .progress {
+            width: 100%;
+            height: 8px;
+            background: #E5E5EA;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #007AFF, #5856D6);
+            width: 0;
+            transition: width 0.3s ease;
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .results {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .metric {
+            background: #f8f9ff;
+            border: 1px solid #e1e5f7;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .metric-label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .metric-value {
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 1.1rem;
+            color: #007AFF;
+            font-weight: bold;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 12px;
+            margin: 15px 0;
+            font-weight: 500;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #cce7ff;
+            color: #004085;
+            border: 1px solid #b3d7ff;
+        }
+
+        .file-info {
+            background: #f8f9ff;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid #e1e5f7;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .file-details {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #007AFF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .footer {
+            text-align: center;
+            padding: 40px 0;
+            color: white;
+            opacity: 0.8;
+        }
+
+        .logs-container {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .logs-header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 12px 12px 0 0;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .logs-header:hover {
+            background: linear-gradient(135deg, #34495e, #2c3e50);
+        }
+
+        .logs-toggle {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .logs-content {
+            background: #2c3e50;
+            color: #ecf0f1;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.9rem;
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 0 0 12px 12px;
+            padding: 0;
+            line-height: 1.4;
+        }
+
+        .log-line {
+            padding: 8px 20px;
+            border-bottom: 1px solid #34495e;
+            word-wrap: break-word;
+        }
+
+        .log-line:last-child {
+            border-bottom: none;
+        }
+
+        .log-line.info {
+            color: #3498db;
+        }
+
+        .log-line.success {
+            color: #27ae60;
+        }
+
+        .log-line.error {
+            color: #e74c3c;
+        }
+
+        .log-line.warning {
+            color: #f39c12;
+        }
+
+        .log-line.exception {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .log-line.start {
+            color: #9b59b6;
+            font-weight: bold;
+        }
+
+        .log-line.final {
+            color: #1abc9c;
+            font-weight: bold;
+        }
+
+        .log-line.metrics {
+            color: #f1c40f;
+        }
+
+        .lang-switcher {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .lang-btn {
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid #007AFF;
+            color: #007AFF;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .lang-btn:hover {
+            background: #007AFF;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+        }
+
+        .lang-btn.active {
+            background: #007AFF;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .hero p {
+                font-size: 1.1rem;
+            }
+            
+            .card {
+                padding: 25px;
+                margin: 10px;
+            }
+            
+            .upload-zone {
+                padding: 40px 15px;
+            }
+
+            .lang-switcher {
+                top: 10px;
+                right: 10px;
+            }
+
+            .lang-btn {
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="lang-switcher">
+        <button class="lang-btn active" data-lang="en">English</button>
+        <button class="lang-btn" data-lang="zh">中文</button>
+    </div>
+    <div class="container">
+        <div class="hero">
+            <h1 data-i18n="hero_title">ONNX to C Converter</h1>
+            <p data-i18n="hero_subtitle">Transform your neural networks into optimized C code for embedded systems and microcontrollers</p>
+        </div>
+
+        <div class="card">
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text" data-i18n="upload_text">Drop your ONNX file here or click to browse</div>
+                <div class="upload-hint" data-i18n="upload_hint">Supports .onnx files up to 100MB</div>
+                <input type="file" id="fileInput" accept=".onnx" />
+            </div>
+
+            <div class="progress" id="progressBar">
+                <div class="progress-bar"></div>
+            </div>
+
+            <div class="status" id="status"></div>
+
+            <div class="logs-container" id="logsContainer">
+                <div class="logs-header" id="logsHeader">
+                    <span data-i18n="logs_title">🔍 Execution Logs</span>
+                    <span class="logs-toggle" id="logsToggle">▼</span>
+                </div>
+                <div class="logs-content" id="logsContent"></div>
+            </div>
+
+            <div class="file-info" id="fileInfo" style="display: none;">
+                <div class="file-name" id="fileName"></div>
+                <div class="file-details" id="fileDetails"></div>
+            </div>
+
+            <div class="results" id="results">
+                <h3 style="margin-bottom: 20px; color: #333;" data-i18n="results_title">Model Validation Results</h3>
+                
+                <div class="metric">
+                    <span class="metric-label" data-i18n="avg_rel_error">Average Relative Error:</span>
+                    <span class="metric-value" id="avgRelError">-</span>
+                </div>
+                
+                <div class="metric">
+                    <span class="metric-label" data-i18n="max_rel_error">Maximum Relative Error:</span>
+                    <span class="metric-value" id="maxRelError">-</span>
+                </div>
+                
+                <div class="metric">
+                    <span class="metric-label" data-i18n="mae">Mean Absolute Error (MAE):</span>
+                    <span class="metric-value" id="mae">-</span>
+                </div>
+                
+                <div class="metric">
+                    <span class="metric-label" data-i18n="max_abs_error">Maximum Absolute Error:</span>
+                    <span class="metric-value" id="maxAbsError">-</span>
+                </div>
+                
+                <div class="metric">
+                    <span class="metric-label" data-i18n="mse">Mean Squared Error (MSE):</span>
+                    <span class="metric-value" id="mse">-</span>
+                </div>
+                
+                <div class="metric">
+                    <span class="metric-label" data-i18n="num_samples">Number of Samples:</span>
+                    <span class="metric-value" id="numSamples">-</span>
+                </div>
+
+                <div style="text-align: center; margin-top: 30px;">
+                    <a href="#" id="downloadBtn" class="btn btn-success" style="display: none;" data-i18n="download_c_file">
+                        📥 Download Generated C File
+                    </a>
+                    <a href="#" id="downloadMainBtn" class="btn btn-secondary" style="display: none;" data-i18n="download_main_file">
+                        📄 Download Main File
+                    </a>
+                    <a href="#" id="downloadExeBtn" class="btn btn-secondary" style="display: none;" data-i18n="download_executable">
+                        ⚙️ Download Executable
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p data-i18n="footer_text">Built with ❤️ using onnx2c - Optimized neural networks for embedded systems</p>
+        </div>
+    </div>
+
+    <script>
+        // ==================== i18n Configuration ====================
+        const translations = {
+            en: {
+                page_title: 'ONNX to C Converter',
+                hero_title: 'ONNX to C Converter',
+                hero_subtitle: 'Transform your neural networks into optimized C code for embedded systems and microcontrollers',
+                upload_text: 'Drop your ONNX file here or click to browse',
+                upload_hint: 'Supports .onnx files up to 100MB',
+                logs_title: '🔍 Execution Logs',
+                results_title: 'Model Validation Results',
+                avg_rel_error: 'Average Relative Error:',
+                max_rel_error: 'Maximum Relative Error:',
+                mae: 'Mean Absolute Error (MAE):',
+                max_abs_error: 'Maximum Absolute Error:',
+                mse: 'Mean Squared Error (MSE):',
+                num_samples: 'Number of Samples:',
+                download_c_file: '📥 Download Generated C File',
+                download_main_file: '📄 Download Main File',
+                download_executable: '⚙️ Download Executable',
+                footer_text: 'Built with ❤️ using onnx2c - Optimized neural networks for embedded systems',
+                conversion_success: '✅ Conversion completed successfully! The model has been validated and is ready for download.',
+                conversion_failed: '❌ Conversion failed:',
+                converting: '⏳ Converting model, please wait...',
+                file_error: 'Please select a valid ONNX file',
+                request_error: 'Request failed:',
+                file_size_text: 'Size:',
+                file_type_text: 'Type:',
+                onnx_model: 'ONNX Model',
+                view_report: '📊 View Detailed Report'
+            },
+            zh: {
+                page_title: 'ONNX to C 转换器',
+                hero_title: 'ONNX to C 转换器',
+                hero_subtitle: '将您的神经网络转换为优化的 C 代码，用于嵌入式系统和微控制器',
+                upload_text: '将 ONNX 文件拖放到此处或点击浏览',
+                upload_hint: '支持 .onnx 文件，最大 100MB',
+                logs_title: '🔍 执行日志',
+                results_title: '模型验证结果',
+                avg_rel_error: '平均相对误差:',
+                max_rel_error: '最大相对误差:',
+                mae: '平均绝对误差 (MAE):',
+                max_abs_error: '最大绝对误差:',
+                mse: '均方误差 (MSE):',
+                num_samples: '测试样本数量:',
+                download_c_file: '📥 下载生成的 C 文件',
+                download_main_file: '📄 下载 Main 文件',
+                download_executable: '⚙️ 下载可执行文件',
+                footer_text: '使用 onnx2c 构建 ❤️ - 为嵌入式系统优化的神经网络',
+                conversion_success: '✅ 转换成功完成！模型已验证并可下载。',
+                conversion_failed: '❌ 转换失败:',
+                converting: '⏳ 正在转换模型，请稍候...',
+                file_error: '请选择一个有效的 ONNX 文件',
+                request_error: '请求失败:',
+                file_size_text: '大小:',
+                file_type_text: '类型:',
+                onnx_model: 'ONNX 模型',
+                view_report: '📊 查看详细报告'
+            }
+        };
+
+        // ==================== Language Manager ====================
+        class LanguageManager {
+            constructor() {
+                this.currentLang = this.detectLanguage();
+                this.init();
+            }
+
+            detectLanguage() {
+                // Check localStorage first
+                const saved = localStorage.getItem('language');
+                if (saved) return saved;
+
+                // Check browser language
+                const browserLang = navigator.language || navigator.userLanguage;
+                if (browserLang.startsWith('zh')) return 'zh';
+                return 'en';
+            }
+
+            init() {
+                this.updatePageLanguage(this.currentLang);
+                this.setupLanguageButtons();
+            }
+
+            setupLanguageButtons() {
+                document.querySelectorAll('.lang-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const lang = btn.getAttribute('data-lang');
+                        this.setLanguage(lang);
+                    });
+                    
+                    if (btn.getAttribute('data-lang') === this.currentLang) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+            }
+
+            setLanguage(lang) {
+                this.currentLang = lang;
+                localStorage.setItem('language', lang);
+                this.updatePageLanguage(lang);
+                this.setupLanguageButtons();
+            }
+
+            updatePageLanguage(lang) {
+                const trans = translations[lang] || translations.en;
+                
+                // Update page title
+                document.title = trans.page_title;
+                
+                // Update all elements with data-i18n attribute
+                document.querySelectorAll('[data-i18n]').forEach(element => {
+                    const key = element.getAttribute('data-i18n');
+                    if (trans[key]) {
+                        if (element.tagName === 'TITLE') {
+                            element.textContent = trans[key];
+                        } else {
+                            element.textContent = trans[key];
+                        }
+                    }
+                });
+            }
+
+            t(key) {
+                const trans = translations[this.currentLang] || translations.en;
+                return trans[key] || translations.en[key] || key;
+            }
+        }
+
+        const langManager = new LanguageManager();
+
+        // ==================== Original Script ====================
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const progressBar = document.getElementById('progressBar');
+        const status = document.getElementById('status');
+        const results = document.getElementById('results');
+        const fileInfo = document.getElementById('fileInfo');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const downloadMainBtn = document.getElementById('downloadMainBtn');
+        const downloadExeBtn = document.getElementById('downloadExeBtn');
+        const logsContainer = document.getElementById('logsContainer');
+        const logsHeader = document.getElementById('logsHeader');
+        const logsContent = document.getElementById('logsContent');
+        const logsToggle = document.getElementById('logsToggle');
+
+        let currentConversionId = null;
+        let logsVisible = true;
+
+        // Logs toggle functionality
+        logsHeader.addEventListener('click', () => {
+            logsVisible = !logsVisible;
+            if (logsVisible) {
+                logsContent.style.display = 'block';
+                logsToggle.textContent = '▼';
+            } else {
+                logsContent.style.display = 'none';
+                logsToggle.textContent = '▶';
+            }
+        });
+
+        function getLogClass(logLine) {
+            if (logLine.includes('[INFO]')) return 'info';
+            if (logLine.includes('[SUCCESS]')) return 'success';
+            if (logLine.includes('[ERROR]')) return 'error';
+            if (logLine.includes('[WARNING]')) return 'warning';
+            if (logLine.includes('[EXCEPTION]')) return 'exception';
+            if (logLine.includes('[START]')) return 'start';
+            if (logLine.includes('[FINAL]')) return 'final';
+            if (logLine.includes('[METRICS]')) return 'metrics';
+            return 'info';
+        }
+
+        function displayLogs(logs) {
+            if (!logs || logs.length === 0) {
+                logsContainer.style.display = 'none';
+                return;
+            }
+
+            logsContent.innerHTML = '';
+            logs.forEach(log => {
+                const logDiv = document.createElement('div');
+                logDiv.className = `log-line ${getLogClass(log)}`;
+                logDiv.textContent = log;
+                logsContent.appendChild(logDiv);
+            });
+
+            logsContainer.style.display = 'block';
+            // Auto scroll to bottom
+            logsContent.scrollTop = logsContent.scrollHeight;
+        }
+
+        // Upload zone click handler
+        uploadZone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // Drag and drop handlers
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        // File input change handler
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function showStatus(message, type = 'info') {
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+
+        function hideStatus() {
+            status.style.display = 'none';
+        }
+
+        function showProgress() {
+            progressBar.style.display = 'block';
+        }
+
+        function hideProgress() {
+            progressBar.style.display = 'none';
+        }
+
+        function showFileInfo(file) {
+            document.getElementById('fileName').textContent = file.name;
+            const sizeText = langManager.t('file_size_text');
+            const typeText = langManager.t('file_type_text');
+            const modelTypeText = langManager.t('onnx_model');
+            document.getElementById('fileDetails').textContent = 
+                `${sizeText} ${(file.size / 1024 / 1024).toFixed(2)} MB | ${typeText} ${file.type || modelTypeText}`;
+            fileInfo.style.display = 'block';
+        }
+
+        function updateResults(data) {
+            // Display execution logs if available
+            if (data.execution_logs) {
+                displayLogs(data.execution_logs);
+            }
+            
+            // Setup download button
+            downloadBtn.href = `/download/${data.conversion_id}`;
+            downloadBtn.style.display = 'inline-block';
+            
+            // Setup download main file button
+            downloadMainBtn.href = `/download/${data.conversion_id}/main`;
+            downloadMainBtn.style.display = 'inline-block';
+            
+            // Setup download executable button
+            downloadExeBtn.href = `/download/${data.conversion_id}/executable`;
+            downloadExeBtn.style.display = 'inline-block';
+            
+            // Add view report button
+            const reportBtn = document.createElement('a');
+            reportBtn.href = `/report/${data.conversion_id}`;
+            reportBtn.className = 'btn btn-secondary';
+            reportBtn.style.marginLeft = '10px';
+            reportBtn.innerHTML = langManager.t('view_report');
+            reportBtn.target = '_blank';
+            
+            // Remove existing report button if any
+            const existingReportBtn = document.querySelector('a[href*="/report/"]');
+            if (existingReportBtn) {
+                existingReportBtn.remove();
+            }
+            
+            downloadBtn.parentNode.appendChild(reportBtn);
+            
+            // Update validation status and metrics
+            if (data.validation) {
+                const validation = data.validation;
+                let statusText = '';
+                let statusClass = '';
+                
+                switch (validation.status) {
+                    case 'success':
+                        statusText = `✅ 验证成功: ${validation.message}`;
+                        statusClass = 'success';
+                        break;
+                    case 'failed':
+                        statusText = `❌ 验证失败: ${validation.message}`;
+                        statusClass = 'error';
+                        break;
+                    case 'error':
+                        statusText = `⚠️ 验证错误: ${validation.message}`;
+                        statusClass = 'error';
+                        break;
+                    case 'skipped':
+                        statusText = `⏭️ 验证跳过: ${validation.message}`;
+                        statusClass = 'info';
+                        break;
+                    default:
+                        statusText = `ℹ️ ${validation.message}`;
+                        statusClass = 'info';
+                }
+                
+                showStatus(statusText, statusClass);
+                
+                // Show metrics if available
+                if (validation.metrics && validation.metrics.overall_metrics) {
+                    const metrics = validation.metrics.overall_metrics;
+                    document.getElementById('avgRelError').textContent = metrics.avg_relative_error.toExponential(2);
+                    document.getElementById('maxRelError').textContent = metrics.max_relative_error.toExponential(2);
+                    document.getElementById('mae').textContent = metrics.mae.toExponential(2);
+                    document.getElementById('maxAbsError').textContent = metrics.max_absolute_error.toExponential(2);
+                    document.getElementById('mse').textContent = metrics.mse.toExponential(2);
+                    document.getElementById('numSamples').textContent = `${metrics.num_samples} (${metrics.num_elements} elements)`;
+                    
+                    results.style.display = 'block';
+                } else {
+                    results.style.display = 'none';
+                }
+            } else {
+                // Fallback for old format
+                if (data.metrics) {
+                    const metrics = data.metrics;
+                    document.getElementById('avgRelError').textContent = metrics.avg_relative_error.toFixed(8);
+                    document.getElementById('maxRelError').textContent = metrics.max_relative_error.toFixed(8);
+                    document.getElementById('mae').textContent = metrics.mae.toFixed(8);
+                    document.getElementById('maxAbsError').textContent = metrics.max_absolute_error.toFixed(8);
+                    document.getElementById('mse').textContent = metrics.mse.toFixed(8);
+                    document.getElementById('numSamples').textContent = metrics.num_samples;
+                    
+                    results.style.display = 'block';
+                    showStatus(langManager.t('conversion_success'), 'success');
+                } else {
+                    results.style.display = 'none';
+                    showStatus(langManager.t('conversion_success'), 'info');
+                }
+            }
+        }
+
+        async function handleFile(file) {
+            if (!file.name.endsWith('.onnx')) {
+                showStatus(langManager.t('file_error'), 'error');
+                return;
+            }
+
+            showFileInfo(file);
+            showProgress();
+            showStatus(langManager.t('converting'), 'info');
+            results.style.display = 'none';
+            downloadBtn.style.display = 'none';
+            downloadMainBtn.style.display = 'none';
+            downloadExeBtn.style.display = 'none';
+            logsContainer.style.display = 'none'; // Hide logs initially
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    // Display logs if available even for errors
+                    if (data.logs) {
+                        displayLogs(data.logs);
+                    }
+                    showStatus(`${langManager.t('conversion_failed')} ${data.error}`, 'error');
+                } else {
+                    currentConversionId = data.conversion_id;
+                    updateResults(data);
+                }
+            } catch (error) {
+                showStatus(`${langManager.t('request_error')} ${error.message}`, 'error');
+            } finally {
+                hideProgress();
+            }
+        }
+
+        // Add some visual feedback
+        document.querySelectorAll('.btn').forEach(btn => {
+            btn.addEventListener('mousedown', () => {
+                btn.style.transform = 'translateY(1px)';
+            });
+            
+            btn.addEventListener('mouseup', () => {
+                btn.style.transform = 'translateY(-2px)';
+            });
+        });
+    </script>
+</body>
+</html>

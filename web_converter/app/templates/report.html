@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="report_title">Conversion Report - ONNX to C</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 40px 0;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .report-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-error {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .status-skipped {
+            background: #f8f9fa;
+            color: #6c757d;
+            border: 1px solid #dee2e6;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            color: #555;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .metric-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .actions {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            margin: 0 10px;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .code-block {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #dc3545;
+            margin: 15px 0;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left: 4px solid #17a2b8;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            transition: width 0.3s ease;
+        }
+
+        .shape-display {
+            display: inline-block;
+            background: #e9ecef;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin: 2px;
+        }
+
+        .lang-switcher {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .lang-btn {
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid #007AFF;
+            color: #007AFF;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .lang-btn:hover {
+            background: #007AFF;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+        }
+
+        .lang-btn.active {
+            background: #007AFF;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .lang-switcher {
+                top: 10px;
+                right: 10px;
+            }
+
+            .lang-btn {
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="lang-switcher">
+        <button class="lang-btn active" data-lang="en">English</button>
+        <button class="lang-btn" data-lang="zh">中文</button>
+    </div>
+    <div class="container">
+        <div class="header">
+            <h1 data-i18n="report_header">🔄 Conversion Report</h1>
+            <p data-i18n="report_subtitle">Detailed analysis of ONNX to C conversion</p>
+        </div>
+
+        <!-- Basic Information -->
+        <div class="report-card">
+            <h2 class="section-title" data-i18n="basic_info">📋 Basic Information</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label" data-i18n="filename">Filename</div>
+                    <div class="info-value">{{ report.filename }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label" data-i18n="conversion_id">Conversion ID</div>
+                    <div class="info-value">{{ report.conversion_id }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label" data-i18n="timestamp">Timestamp</div>
+                    <div class="info-value">{{ report.timestamp }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label" data-i18n="status">Status</div>
+                    <div class="info-value">
+                        <span class="status-badge status-success">✅ Success</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if report.model_info %}
+        <!-- Model Information -->
+        <div class="report-card">
+            <h2 class="section-title" data-i18n="model_info">🧠 Model Information</h2>
+            <div class="info-grid">
+                {% if report.model_info.model_info %}
+                <div class="info-item">
+                    <div class="info-label" data-i18n="producer">Producer</div>
+                    <div class="info-value">{{ report.model_info.model_info.producer_name }} {{ report.model_info.model_info.producer_version }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label" data-i18n="onnx_version">ONNX Version</div>
+                    <div class="info-value">IR: {{ report.model_info.model_info.ir_version }}, Opset: {{ report.model_info.model_info.opset_version }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label" data-i18n="total_nodes">Total Nodes</div>
+                    <div class="info-value">{{ report.model_info.total_nodes }}</div>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if report.model_info.inputs %}
+            <h3 style="margin: 20px 0 10px 0; color: #2c3e50;" data-i18n="inputs">📥 Input Tensors</h3>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th data-i18n="name">Name</th>
+                            <th data-i18n="shape">Shape</th>
+                            <th data-i18n="type">Type</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for input in report.model_info.inputs %}
+                        <tr>
+                            <td>{{ input.name }}</td>
+                            <td>
+                                {% for dim in input.shape %}
+                                <span class="shape-display">{{ dim }}</span>
+                                {% endfor %}
+                            </td>
+                            <td>{{ input.type }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+
+            {% if report.model_info.outputs %}
+            <h3 style="margin: 20px 0 10px 0; color: #2c3e50;" data-i18n="outputs">📤 Output Tensors</h3>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th data-i18n="name">Name</th>
+                            <th data-i18n="shape">Shape</th>
+                            <th data-i18n="type">Type</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for output in report.model_info.outputs %}
+                        <tr>
+                            <td>{{ output.name }}</td>
+                            <td>
+                                {% for dim in output.shape %}
+                                <span class="shape-display">{{ dim }}</span>
+                                {% endfor %}
+                            </td>
+                            <td>{{ output.type }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+
+            {% if report.model_info.node_counts %}
+            <h3 style="margin: 20px 0 10px 0; color: #2c3e50;" data-i18n="node_types">🔧 Node Types</h3>
+            <div class="info-grid">
+                {% for op_type, count in report.model_info.node_counts.items() %}
+                <div class="info-item">
+                    <div class="info-label">{{ op_type }}</div>
+                    <div class="info-value" data-i18n="nodes">{{ count }} nodes</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Validation Report -->
+        <div class="report-card">
+            <h2 class="section-title" data-i18n="validation_report">✅ Validation Report</h2>
+            
+            <div class="info-item" style="margin-bottom: 20px;">
+                <div class="info-label" data-i18n="validation_status">Validation Status</div>
+                <div class="info-value">
+                    {% if report.validation.status == 'success' %}
+                    <span class="status-badge status-success">✅ {{ report.validation.status|upper }}</span>
+                    {% elif report.validation.status == 'failed' %}
+                    <span class="status-badge status-failed">❌ {{ report.validation.status|upper }}</span>
+                    {% elif report.validation.status == 'error' %}
+                    <span class="status-badge status-error">⚠️ {{ report.validation.status|upper }}</span>
+                    {% else %}
+                    <span class="status-badge status-skipped">⏭️ {{ report.validation.status|upper }}</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if report.validation.message %}
+            <div class="alert alert-info">
+                <strong data-i18n="message">📝 Message:</strong> {{ report.validation.message }}
+            </div>
+            {% endif %}
+
+            {% if report.validation.error %}
+            <div class="error-message">
+                <strong data-i18n="error">⚠️ Error:</strong> {{ report.validation.error }}
+            </div>
+            {% endif %}
+
+            {% if report.validation.metrics %}
+            <h3 style="margin: 20px 0 15px 0; color: #2c3e50;" data-i18n="accuracy_metrics">📊 Accuracy Metrics</h3>
+            
+            {% if report.validation.metrics.overall_metrics %}
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">{{ "%.2e"|format(report.validation.metrics.overall_metrics.mae) }}</div>
+                    <div class="metric-label" data-i18n="mean_absolute_error">Mean Absolute Error</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">{{ "%.2e"|format(report.validation.metrics.overall_metrics.max_absolute_error) }}</div>
+                    <div class="metric-label" data-i18n="max_absolute_error">Max Absolute Error</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">{{ "%.2e"|format(report.validation.metrics.overall_metrics.avg_relative_error) }}</div>
+                    <div class="metric-label" data-i18n="avg_relative_error">Avg Relative Error</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">{{ "%.2e"|format(report.validation.metrics.overall_metrics.rmse) }}</div>
+                    <div class="metric-label" data-i18n="rmse">Root Mean Square Error</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">{{ report.validation.metrics.overall_metrics.num_samples }}</div>
+                    <div class="metric-label" data-i18n="test_samples">Test Samples</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">{{ report.validation.metrics.overall_metrics.num_elements }}</div>
+                    <div class="metric-label" data-i18n="total_elements">Total Elements</div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if report.validation.metrics.error_distribution %}
+            <h4 style="margin: 20px 0 10px 0; color: #2c3e50;" data-i18n="error_distribution">📈 Error Distribution</h4>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th data-i18n="percentile">Percentile</th>
+                            <th data-i18n="absolute_error">Absolute Error</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for percentile, error in report.validation.metrics.error_distribution.items() %}
+                        <tr>
+                            <td>{{ percentile }}</td>
+                            <td>{{ "%.2e"|format(error) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+
+            {% if report.validation.metrics.sample_errors %}
+            <h4 style="margin: 20px 0 10px 0; color: #2c3e50;" data-i18n="sample_errors">🔍 Sample-wise Errors (First 5)</h4>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th data-i18n="sample">Sample</th>
+                            <th data-i18n="output">Output</th>
+                            <th data-i18n="mae">MAE</th>
+                            <th data-i18n="max_error">Max Error</th>
+                            <th data-i18n="avg_rel_error">Avg Rel Error</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sample_errors in report.validation.metrics.sample_errors[:5] %}
+                        {% set outer_loop = loop %}
+                        {% for error in sample_errors %}
+                        <tr>
+                            <td>{{ outer_loop.index }}</td>
+                            <td>{{ error.output_index }}</td>
+                            <td>{{ "%.2e"|format(error.mae) }}</td>
+                            <td>{{ "%.2e"|format(error.max_error) }}</td>
+                            <td>{{ "%.2e"|format(error.avg_rel_error) }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- Execution Logs -->
+        {% if report.execution_logs %}
+        <div class="report-card">
+            <h2 class="section-title" data-i18n="execution_logs">📋 Execution Logs</h2>
+            <div class="code-block" style="max-height: 400px; overflow-y: auto;">
+                {% for log in report.execution_logs %}
+                <div style="padding: 2px 0; {% if '[ERROR]' in log or '[EXCEPTION]' in log %}color: #e74c3c;{% elif '[SUCCESS]' in log %}color: #27ae60;{% elif '[WARNING]' in log %}color: #f39c12;{% elif '[START]' in log or '[FINAL]' in log %}color: #9b59b6; font-weight: bold;{% elif '[METRICS]' in log %}color: #f1c40f;{% elif '[INFO]' in log %}color: #3498db;{% endif %}">{{ log }}</div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Generated Files -->
+        {% if report.files %}
+        <div class="report-card">
+            <h2 class="section-title" data-i18n="generated_files">📁 Generated Files</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label" data-i18n="c_source_file">C Source File</div>
+                    <div class="info-value">{{ report.files.c_file }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label" data-i18n="main_file">Main File</div>
+                    <div class="info-value">{{ report.files.main_file }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label" data-i18n="executable">Executable</div>
+                    <div class="info-value">{{ report.files.executable }}</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Actions -->
+        <div class="actions">
+            <a href="/download/{{ report.conversion_id }}" class="btn btn-primary" data-i18n="download_c_code">
+                📥 Download C Code
+            </a>
+            <a href="/" class="btn btn-secondary" data-i18n="back_to_home">
+                🏠 Back to Home
+            </a>
+            <a href="/api/report/{{ report.conversion_id }}" class="btn btn-secondary" data-i18n="view_json_report">
+                📋 View JSON Report
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // ==================== i18n Configuration ====================
+        const reportTranslations = {
+            en: {
+                report_title: 'Conversion Report - ONNX to C',
+                report_header: '🔄 Conversion Report',
+                report_subtitle: 'Detailed analysis of ONNX to C conversion',
+                basic_info: '📋 Basic Information',
+                filename: 'Filename',
+                conversion_id: 'Conversion ID',
+                timestamp: 'Timestamp',
+                status: 'Status',
+                model_info: '🧠 Model Information',
+                producer: 'Producer',
+                onnx_version: 'ONNX Version',
+                total_nodes: 'Total Nodes',
+                inputs: '📥 Input Tensors',
+                outputs: '📤 Output Tensors',
+                name: 'Name',
+                shape: 'Shape',
+                type: 'Type',
+                node_types: '🔧 Node Types',
+                nodes: 'nodes',
+                validation_report: '✅ Validation Report',
+                validation_status: 'Validation Status',
+                message: '📝 Message:',
+                error: '⚠️ Error:',
+                accuracy_metrics: '📊 Accuracy Metrics',
+                mean_absolute_error: 'Mean Absolute Error',
+                max_absolute_error: 'Max Absolute Error',
+                avg_relative_error: 'Avg Relative Error',
+                rmse: 'Root Mean Square Error',
+                test_samples: 'Test Samples',
+                total_elements: 'Total Elements',
+                error_distribution: '📈 Error Distribution',
+                percentile: 'Percentile',
+                absolute_error: 'Absolute Error',
+                sample_errors: '🔍 Sample-wise Errors (First 5)',
+                sample: 'Sample',
+                output: 'Output',
+                mae: 'MAE',
+                max_error: 'Max Error',
+                avg_rel_error: 'Avg Rel Error',
+                execution_logs: '📋 Execution Logs',
+                generated_files: '📁 Generated Files',
+                c_source_file: 'C Source File',
+                main_file: 'Main File',
+                executable: 'Executable',
+                download_c_code: '📥 Download C Code',
+                back_to_home: '🏠 Back to Home',
+                view_json_report: '📋 View JSON Report',
+                copied: 'Copied!'
+            },
+            zh: {
+                report_title: '转换报告 - ONNX to C',
+                report_header: '🔄 转换报告',
+                report_subtitle: 'ONNX 到 C 转换的详细分析',
+                basic_info: '📋 基本信息',
+                filename: '文件名',
+                conversion_id: '转换 ID',
+                timestamp: '时间戳',
+                status: '状态',
+                model_info: '🧠 模型信息',
+                producer: '生产者',
+                onnx_version: 'ONNX 版本',
+                total_nodes: '总节点数',
+                inputs: '📥 输入张量',
+                outputs: '📤 输出张量',
+                name: '名称',
+                shape: '形状',
+                type: '类型',
+                node_types: '🔧 节点类型',
+                nodes: '个节点',
+                validation_report: '✅ 验证报告',
+                validation_status: '验证状态',
+                message: '📝 消息:',
+                error: '⚠️ 错误:',
+                accuracy_metrics: '📊 准确度指标',
+                mean_absolute_error: '平均绝对误差',
+                max_absolute_error: '最大绝对误差',
+                avg_relative_error: '平均相对误差',
+                rmse: '均方根误差',
+                test_samples: '测试样本',
+                total_elements: '总元素数',
+                error_distribution: '📈 误差分布',
+                percentile: '百分位数',
+                absolute_error: '绝对误差',
+                sample_errors: '🔍 逐样本误差（前 5 个）',
+                sample: '样本',
+                output: '输出',
+                mae: 'MAE',
+                max_error: '最大误差',
+                avg_rel_error: '平均相对误差',
+                execution_logs: '📋 执行日志',
+                generated_files: '📁 生成的文件',
+                c_source_file: 'C 源文件',
+                main_file: 'Main 文件',
+                executable: '可执行文件',
+                download_c_code: '📥 下载 C 代码',
+                back_to_home: '🏠 返回首页',
+                view_json_report: '📋 查看 JSON 报告',
+                copied: '已复制!'
+            }
+        };
+
+        // ==================== Report Language Manager ====================
+        class ReportLanguageManager {
+            constructor() {
+                this.currentLang = this.detectLanguage();
+                this.init();
+            }
+
+            detectLanguage() {
+                // Check localStorage first
+                const saved = localStorage.getItem('language');
+                if (saved) return saved;
+
+                // Check browser language
+                const browserLang = navigator.language || navigator.userLanguage;
+                if (browserLang.startsWith('zh')) return 'zh';
+                return 'en';
+            }
+
+            init() {
+                this.updatePageLanguage(this.currentLang);
+                this.setupLanguageButtons();
+            }
+
+            setupLanguageButtons() {
+                document.querySelectorAll('.lang-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const lang = btn.getAttribute('data-lang');
+                        this.setLanguage(lang);
+                    });
+                    
+                    if (btn.getAttribute('data-lang') === this.currentLang) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+            }
+
+            setLanguage(lang) {
+                this.currentLang = lang;
+                localStorage.setItem('language', lang);
+                this.updatePageLanguage(lang);
+                this.setupLanguageButtons();
+            }
+
+            updatePageLanguage(lang) {
+                const trans = reportTranslations[lang] || reportTranslations.en;
+                
+                // Update page title
+                document.title = trans.report_title;
+                
+                // Update all elements with data-i18n attribute
+                document.querySelectorAll('[data-i18n]').forEach(element => {
+                    const key = element.getAttribute('data-i18n');
+                    if (trans[key]) {
+                        element.textContent = trans[key];
+                    }
+                });
+            }
+
+            t(key) {
+                const trans = reportTranslations[this.currentLang] || reportTranslations.en;
+                return trans[key] || reportTranslations.en[key] || key;
+            }
+        }
+
+        const reportLangManager = new ReportLanguageManager();
+
+        // ==================== Original Script ====================
+        // Add some interactive features
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate metric cards
+            const metricCards = document.querySelectorAll('.metric-card');
+            metricCards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    card.style.transition = 'all 0.5s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+
+            // Add copy functionality to conversion ID
+            const conversionId = document.querySelector('.info-value');
+            if (conversionId && conversionId.textContent.includes('-')) {
+                conversionId.style.cursor = 'pointer';
+                conversionId.title = 'Click to copy';
+                conversionId.addEventListener('click', function() {
+                    navigator.clipboard.writeText(this.textContent);
+                    const originalText = this.textContent;
+                    this.textContent = reportLangManager.t('copied');
+                    setTimeout(() => {
+                        this.textContent = originalText;
+                    }, 2000);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
