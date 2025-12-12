@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  onnx2c-web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - "./app/uploads:/app/web_app/uploads"
+      - "./app/generated:/app/web_app/generated"
+      - "./app/static:/app/web_app/static"
+      - "./app/templates:/app/web_app/templates"
+    environment:
+      - ONNX2C_PATH=/app/build/onnx2c
+      - PYTHONPATH=/app
+    restart: unless-stopped
+    container_name: onnx2c-converter
+
+networks:
+  default:
+    name: onnx2c-network
