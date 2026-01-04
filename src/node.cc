@@ -105,13 +105,19 @@ void Node::print_parameters(std::ostream& dst, bool not_callsite) const
 		// corner case with Shape node: in case the shape output is graph output
 		// it is marked const (since other nodes have already used the compile-time generated output
 		// of the shape node).
-		if (t->isIO)
+		//
+		// Also, for function definitions (not_callsite == true), the output parameters
+		// must never be const, as the function's purpose is to write to them.
+		bool old_isConst = t->isConst;
+		if (t->isIO || not_callsite)
 			t->isConst = false;
 
 		if (not_callsite)
 			params.push_back(t->print_tensor(name));
 		else
 			params.push_back(t->print_tensor_callsite());
+
+		t->isConst = old_isConst;
 	}
 
 	// Then print the parmeters as comma-separated string

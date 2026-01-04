@@ -415,6 +415,51 @@
         </div>
 
         <div class="card">
+            <h3 style="margin-bottom: 20px; color: #333;" data-i18n="examples_title">PyTorch Training Examples</h3>
+            <p style="margin-bottom: 20px; color: #666;" data-i18n="examples_subtitle">Download these examples to train and export your own models to ONNX</p>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
+                <div style="flex: 1; min-width: 250px; background: #f8f9ff; padding: 20px; border-radius: 12px; border: 1px solid #e1e5f7; text-align: center;">
+                    <h4 style="margin-bottom: 10px;">MLP Model</h4>
+                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;" data-i18n="mlp_desc">Multi-Layer Perceptron for classification</p>
+                    <div style="display: flex; gap: 5px; justify-content: center;">
+                        <a href="/download_example/mlp_example.py" class="btn btn-secondary" style="margin: 0; padding: 10px 15px; font-size: 0.85rem;" data-i18n="download_script">Download Script</a>
+                        <a href="/download_example/mlp_model.onnx" class="btn btn-success" style="margin: 0; padding: 10px 15px; font-size: 0.85rem;" data-i18n="download_onnx">Download ONNX</a>
+                    </div>
+                </div>
+                <div style="flex: 1; min-width: 250px; background: #f8f9ff; padding: 20px; border-radius: 12px; border: 1px solid #e1e5f7; text-align: center;">
+                    <h4 style="margin-bottom: 10px;">CNN Model</h4>
+                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;" data-i18n="cnn_desc">Convolutional Neural Network for images</p>
+                    <div style="display: flex; gap: 5px; justify-content: center;">
+                        <a href="/download_example/cnn_example.py" class="btn btn-secondary" style="margin: 0; padding: 10px 15px; font-size: 0.85rem;" data-i18n="download_script">Download Script</a>
+                        <a href="/download_example/cnn_model.onnx" class="btn btn-success" style="margin: 0; padding: 10px 15px; font-size: 0.85rem;" data-i18n="download_onnx">Download ONNX</a>
+                    </div>
+                </div>
+                <div style="flex: 1; min-width: 250px; background: #f8f9ff; padding: 20px; border-radius: 12px; border: 1px solid #e1e5f7; text-align: center;">
+                    <h4 style="margin-bottom: 10px;">CNN1D Model</h4>
+                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;" data-i18n="cnn1d_desc">1D Convolutional Neural Network for time series</p>
+                    <div style="display: flex; gap: 5px; justify-content: center;">
+                        <a href="/download_example/cnn1d_example.py" class="btn btn-secondary" style="margin: 0; padding: 10px 15px; font-size: 0.85rem;" data-i18n="download_script">Download Script</a>
+                        <a href="/download_example/cnn1d_model.onnx" class="btn btn-success" style="margin: 0; padding: 10px 15px; font-size: 0.85rem;" data-i18n="download_onnx">Download ONNX</a>
+                    </div>
+                </div>
+                <div style="flex: 1; min-width: 250px; background: #f8f9ff; padding: 20px; border-radius: 12px; border: 1px solid #e1e5f7; text-align: center;">
+                    <h4 style="margin-bottom: 10px;">LSTM Model</h4>
+                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;" data-i18n="lstm_desc">Long Short-Term Memory for sequences</p>
+                    <div style="display: flex; gap: 5px; justify-content: center;">
+                        <a href="/download_example/lstm_example.py" class="btn btn-secondary" style="margin: 0; padding: 10px 15px; font-size: 0.85rem;" data-i18n="download_script">Download Script</a>
+                        <a href="/download_example/lstm_model.onnx" class="btn btn-success" style="margin: 0; padding: 10px 15px; font-size: 0.85rem;" data-i18n="download_onnx">Download ONNX</a>
+                    </div>
+                </div>
+                <div style="flex: 1; min-width: 250px; background: #f8f9ff; padding: 20px; border-radius: 12px; border: 1px solid #e1e5f7; text-align: center;">
+                    <h4 style="margin-bottom: 10px;">LSTM with H/C</h4>
+                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;" data-i18n="lstm_hc_desc">LSTM with initial hidden and cell states</p>
+                    <div style="display: flex; gap: 5px; justify-content: center;">
+                        <a href="/download_example/lstm_with_hc_example.py" class="btn btn-secondary" style="margin: 0; padding: 10px 15px; font-size: 0.85rem;" data-i18n="download_script">Download Script</a>
+                        <a href="/download_example/lstm_with_hc.onnx" class="btn btn-success" style="margin: 0; padding: 10px 15px; font-size: 0.85rem;" data-i18n="download_onnx">Download ONNX</a>
+                    </div>
+                </div>
+            </div>
+            <hr style="margin: 30px 0; border: 0; border-top: 1px solid #eee;">
             <div class="upload-zone" id="uploadZone">
                 <div class="upload-icon">📁</div>
                 <div class="upload-text" data-i18n="upload_text">Drop your ONNX file here or click to browse</div>
@@ -522,7 +567,16 @@
                 file_size_text: 'Size:',
                 file_type_text: 'Type:',
                 onnx_model: 'ONNX Model',
-                view_report: '📊 View Detailed Report'
+                view_report: '📊 View Detailed Report',
+                examples_title: 'PyTorch Training Examples',
+                examples_subtitle: 'Download these examples to train and export your own models to ONNX',
+                mlp_desc: 'Multi-Layer Perceptron for classification',
+                cnn_desc: 'Convolutional Neural Network for images',
+                cnn1d_desc: '1D Convolutional Neural Network for time series',
+                lstm_desc: 'Long Short-Term Memory for sequences',
+                lstm_hc_desc: 'LSTM with initial hidden and cell states',
+                download_script: 'Download Script',
+                download_onnx: 'Download ONNX'
             },
             zh: {
                 page_title: 'ONNX to C 转换器',
@@ -550,7 +604,16 @@
                 file_size_text: '大小:',
                 file_type_text: '类型:',
                 onnx_model: 'ONNX 模型',
-                view_report: '📊 查看详细报告'
+                view_report: '📊 查看详细报告',
+                examples_title: 'PyTorch 训练示例',
+                examples_subtitle: '下载这些示例代码，自行训练模型并导出为 ONNX',
+                mlp_desc: '多层感知机（全连接网络）用于分类',
+                cnn_desc: '卷积神经网络用于图像处理',
+                cnn1d_desc: '一维卷积神经网络用于时间序列',
+                lstm_desc: '长短期记忆网络用于序列数据',
+                lstm_hc_desc: '带有初始隐状态和细胞状态的 LSTM',
+                download_script: '下载脚本',
+                download_onnx: '下载 ONNX'
             }
         };
 

@@ -21,6 +21,11 @@ void ConstantOfShape::resolve(void)
 	Tensor* input = get_input_tensor(0);
 	name_input(0, "input");
 
+	if (input->data_buffer == nullptr) {
+		ERROR("ConstantOfShape: input tensor (shape) must be a compile-time constant. "
+		      "Make sure preceding nodes (Shape, Gather, Concat, etc.) support constant folding.");
+	}
+
 	Tensor* t = new Tensor;
 	for (int i = 0; i < input->data_num_elem(); i++) {
 		uint64_t d = input->get_data_element(i);

@@ -23,7 +23,7 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB limit
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['GENERATED_FOLDER'], exist_ok=True)
 
-ONNX2C_PATH = os.environ.get('ONNX2C_PATH', '../build/onnx2c')
+ONNX2C_PATH = os.environ.get('ONNX2C_PATH', '/usr/bin/onnx2c')
 
 def cleanup_old_files():
     """清理10分钟前的文件"""
@@ -447,6 +447,17 @@ def calculate_metrics(onnx_results, c_results):
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/download_example/<filename>')
+def download_example(filename):
+    """Download example PyTorch scripts"""
+    examples_dir = os.path.join(os.path.dirname(__file__), 'examples')
+    file_path = os.path.join(examples_dir, filename)
+    
+    if os.path.exists(file_path):
+        return send_file(file_path, as_attachment=True)
+    else:
+        return "Example file not found", 404
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
