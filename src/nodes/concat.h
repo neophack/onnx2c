@@ -95,6 +95,28 @@ class Concat : public Node {
 		rv->data_dim = dims;
 		rv->data_dim[axis] = output_axis_size;
 		rv->data_type = get_input_tensor(0)->data_type;
+
+		// If all inputs are constants, the output of Concat is also a constant
+		bool all_const = true;
+		for (size_t i = 0; i < get_number_of_inputs(); i++) {
+			if (get_input_tensor(i)->data_buffer == nullptr) {
+				all_const = false;
+				break;
+			}
+		}
+
+		if (all_const) {
+			rv->isConst = true;
+			rv->data_buffer = malloc(rv->data_num_elem() * rv->data_elem_size());
+			size_t offset = 0;
+			for (size_t i = 0; i < get_number_of_inputs(); i++) {
+				const Tensor* it = get_input_tensor(i);
+				size_t copy_size = it->data_num_elem() * it->data_elem_size();
+				memcpy((char*)rv->data_buffer + offset, it->data_buffer, copy_size);
+				offset += copy_size;
+			}
+		}
+
 		register_output(rv, "concat_result");
 	}
 };

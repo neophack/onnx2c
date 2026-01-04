@@ -46,6 +46,34 @@ class Gather : public Node {
 			t->data_dim.push_back(data->data_dim[i]);
 
 		t->data_type = data->data_type;
+
+		if (data->data_buffer && indices->data_buffer) {
+			t->isConst = true;
+			t->data_buffer = malloc(t->data_num_elem() * t->data_elem_size());
+			// TODO: implement constant folding for Gather.
+			// For now, only handle the simple case used in shape calculations:
+			// data is 1D (from Shape node), indices is a scalar.
+			if (data->rank() == 1 && indices->rank() == 0) {
+				int32_t idx = indices->get_data_element(0);
+				if (idx < 0) idx += data->data_dim[0];
+				if (t->data_type == onnx::TensorProto_DataType_INT64) {
+					((int64_t*)t->data_buffer)[0] = ((int64_t*)data->data_buffer)[idx];
+				} else if (t->data_type == onnx::TensorProto_DataType_INT32) {
+					((int32_t*)t->data_buffer)[0] = ((int32_t*)data->data_buffer)[idx];
+				} else {
+					// Fallback or error
+					free(t->data_buffer);
+					t->data_buffer = nullptr;
+					t->isConst = false;
+				}
+			} else {
+				// Too complex for now, fall back to non-const
+				free(t->data_buffer);
+				t->data_buffer = nullptr;
+				t->isConst = false;
+			}
+		}
+
 		register_output(t, "Y");
 	}
 

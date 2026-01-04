@@ -35,6 +35,7 @@ COPY test/ /app/test/
 COPY args/ /app/args/
 COPY aixlog/ /app/aixlog/
 COPY benchmark/ /app/benchmark/
+COPY protobuf/ /app/protobuf/
 COPY cmake_timestamp/ /app/cmake_timestamp/
 COPY CMakeLists.txt /app/
 
@@ -42,14 +43,16 @@ COPY CMakeLists.txt /app/
 RUN mkdir -p build && \
     cd build && \
     cmake -DCMAKE_BUILD_TYPE=Debug .. && \
-    make onnx2c
+    make onnx2c && \
+    cp onnx2c /usr/bin/onnx2c && \
+    make clean
 
 # Copy web converter files
 COPY web_converter/ /app/
 COPY web_converter/app /app/web_app/
 
 # Set environment variables
-ENV ONNX2C_PATH=/app/build/onnx2c
+ENV ONNX2C_PATH=/usr/bin/onnx2c
 ENV PYTHONPATH=/app
 
 # Expose port

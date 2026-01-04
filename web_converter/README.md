@@ -41,7 +41,7 @@ run.bat
 
 ```bash
 # 构建镜像
-docker build -t onnx2c-web-converter .
+docker build -t onnx2c-web-converter . -f .\web_converter\Dockerfile        
 
 # 运行容器
 docker run -p 5000:5000 \
