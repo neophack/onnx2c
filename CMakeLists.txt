@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.13...3.30)
 # 3.13 because of target_link_options
 set(CMAKE_POLICY_DEFAULT_CMP0048 NEW)
 
@@ -7,22 +7,33 @@ project(onnx2c
 	LANGUAGES C CXX
 	)
 set (CMAKE_CXX_STANDARD 20)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -Wfatal-errors")
+# Global flags removed to prevent affecting 3rd party deps (protobuf/absl)
+# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -Wfatal-errors")
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEFAULT_LOG_LEVEL=4")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DDEFAULT_LOG_LEVEL=1")
 
 add_subdirectory(cmake_timestamp)
 
-find_package(Protobuf REQUIRED)
-include_directories(${Protobuf_INCLUDE_DIRS})
+
+# Disable protobuf tests and examples to speed up build
+set(protobuf_BUILD_TESTS OFF CACHE BOOL "Build tests" FORCE)
+set(protobuf_BUILD_EXAMPLES OFF CACHE BOOL "Build examples" FORCE)
+add_subdirectory(protobuf)
+
+# onnx2c_lib needs to see protobuf headers. 
+# While linking to protobuf::libprotobuf propagates usage requirements,
+# we add the binary dir for generated files (if any) and source just in case.
+# But linking is the primary method.
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(src)
 
 add_custom_command(
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/onnx.pb.cc ${CMAKE_CURRENT_BINARY_DIR}/onnx.pb.h
-	COMMAND protoc --proto_path=${CMAKE_CURRENT_SOURCE_DIR}/onnx/onnx/ --cpp_out=. ${CMAKE_CURRENT_SOURCE_DIR}/onnx/onnx/onnx.proto
+	COMMAND protobuf::protoc --proto_path=${CMAKE_CURRENT_SOURCE_DIR}/onnx/onnx/ --cpp_out=. ${CMAKE_CURRENT_SOURCE_DIR}/onnx/onnx/onnx.proto
 	MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/onnx/onnx/onnx.proto
+    DEPENDS protobuf::protoc
 	)
 
 
@@ -46,6 +57,10 @@ add_library(onnx2c_lib STATIC
 	src/nodes/scatternd.cc
 	src/nodes/treeensembleclassifier.cc
 )
+
+# Link against protobuf library (provides headers and linking symbols)
+target_link_libraries(onnx2c_lib PUBLIC protobuf::libprotobuf)
+target_compile_definitions(onnx2c_lib PRIVATE UNICODE _UNICODE)
 target_compile_options(onnx2c_lib
 	PUBLIC
 		-I${CMAKE_CURRENT_BINARY_DIR}
@@ -53,21 +68,22 @@ target_compile_options(onnx2c_lib
 		-I${CMAKE_CURRENT_SOURCE_DIR}/aixlog/include
 		-I${CMAKE_CURRENT_SOURCE_DIR}/cmake_timestamp
 		-Isrc
-		-Wall
+		-Wall -Wfatal-errors
 	)
 
 add_executable( onnx2c
 	src/main.cc
 	src/options.cc
 	)
+target_compile_definitions(onnx2c PRIVATE UNICODE _UNICODE)
 target_compile_options(onnx2c
 	PRIVATE
 		-Isrc
 		-I${CMAKE_CURRENT_SOURCE_DIR}/aixlog/include
 		-I${CMAKE_CURRENT_SOURCE_DIR}/args
-		-Wall
+		-Wall -Wfatal-errors
 	)
-target_link_libraries(onnx2c onnx2c_lib ${Protobuf_LIBRARIES} timestamp)
+target_link_libraries(onnx2c onnx2c_lib timestamp)
 
 enable_testing()
 add_subdirectory(test)
