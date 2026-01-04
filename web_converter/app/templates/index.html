@@ -13,92 +13,140 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: radial-gradient(circle at center, #1a1f35 0%, #0a0e17 100%);
+            color: #e0e6ed;
             min-height: 100vh;
             line-height: 1.6;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1300px;
             margin: 0 auto;
             padding: 20px;
         }
 
         .hero {
             text-align: center;
-            padding: 10px 0;
-            color: white;
+            padding: 40px 0;
+            color: #00f2ff;
         }
 
         .hero h1 {
             font-size: 3.5rem;
-            font-weight: 700;
+            font-weight: 800;
             margin-bottom: 20px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            text-shadow: 0 0 20px rgba(0, 242, 255, 0.5);
+            letter-spacing: 2px;
+            text-transform: uppercase;
         }
 
         .hero p {
-            font-size: 1.3rem;
-            margin-bottom: 40px;
-            opacity: 0.9;
-            max-width: 600px;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            opacity: 0.8;
+            max-width: 700px;
             margin-left: auto;
             margin-right: auto;
+            color: #aab4be;
         }
 
         .card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
+            background: rgba(16, 22, 35, 0.8);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
             padding: 40px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5), inset 0 0 2px rgba(0, 242, 255, 0.2);
             margin-bottom: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(0, 242, 255, 0.1);
+        }
+
+        .examples-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            margin-bottom: 30px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .example-item {
+            flex: 1;
+            min-width: 200px;
+            background: rgba(30, 41, 59, 0.5);
+            padding: 20px 15px;
+            border-radius: 16px;
+            border: 1px solid rgba(0, 242, 255, 0.1);
+            text-align: center;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .example-item:hover {
+            background: rgba(30, 41, 59, 0.8);
+            border-color: #00f2ff;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 242, 255, 0.1);
+        }
+
+        .example-item h4 {
+            color: #00f2ff;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .example-item p {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 15px;
         }
 
         .upload-zone {
-            border: 3px dashed #007AFF;
-            border-radius: 15px;
+            border: 2px dashed rgba(0, 242, 255, 0.3);
+            border-radius: 20px;
             padding: 60px 20px;
             text-align: center;
-            background: #f8f9ff;
+            background: rgba(15, 23, 42, 0.6);
             transition: all 0.3s ease;
             cursor: pointer;
             position: relative;
         }
 
         .upload-zone:hover {
-            background: #f0f2ff;
-            transform: translateY(-2px);
+            background: rgba(15, 23, 42, 0.8);
+            border-color: #00f2ff;
+            transform: scale(1.01);
         }
 
         .upload-zone.dragover {
-            background: #e8f4f8;
-            border-color: #34C759;
+            background: rgba(0, 242, 255, 0.1);
+            border-color: #00f2ff;
         }
 
         .upload-icon {
             width: 80px;
             height: 80px;
             margin: 0 auto 20px;
-            background: linear-gradient(135deg, #007AFF, #5856D6);
+            background: linear-gradient(135deg, #00f2ff, #007AFF);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             font-size: 2.5rem;
+            box-shadow: 0 0 20px rgba(0, 242, 255, 0.4);
         }
 
         .upload-text {
             font-size: 1.2rem;
-            color: #333;
+            color: #e0e6ed;
             margin-bottom: 10px;
         }
 
         .upload-hint {
-            color: #666;
+            color: #94a3b8;
             font-size: 0.9rem;
         }
 
@@ -107,86 +155,104 @@
         }
 
         .btn {
-            background: linear-gradient(135deg, #007AFF, #5856D6);
-            color: white;
+            background: linear-gradient(135deg, #00f2ff, #007AFF);
+            color: #0a0e17;
             border: none;
-            border-radius: 12px;
-            padding: 15px 30px;
-            font-size: 1rem;
-            font-weight: 600;
+            border-radius: 10px;
+            padding: 12px 24px;
+            font-size: 0.95rem;
+            font-weight: 700;
             cursor: pointer;
             transition: all 0.3s ease;
             text-decoration: none;
             display: inline-block;
-            margin: 10px;
+            margin: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0, 122, 255, 0.3);
-        }
-
-        .btn:active {
-            transform: translateY(0);
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.5);
+            filter: brightness(1.1);
         }
 
         .btn-success {
-            background: linear-gradient(135deg, #34C759, #30D158);
+            background: linear-gradient(135deg, #00f2ff, #007AFF);
         }
 
         .btn-secondary {
-            background: linear-gradient(135deg, #8E8E93, #6D6D70);
+            background: transparent;
+            border: 1px solid rgba(0, 242, 255, 0.5);
+            color: #00f2ff;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(0, 242, 255, 0.1);
         }
 
         .progress {
             width: 100%;
-            height: 8px;
-            background: #E5E5EA;
-            border-radius: 4px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
             overflow: hidden;
-            margin: 20px 0;
+            margin: 25px 0;
             display: none;
+            border: 1px solid rgba(0, 242, 255, 0.1);
         }
 
         .progress-bar {
             height: 100%;
-            background: linear-gradient(90deg, #007AFF, #5856D6);
+            background: linear-gradient(90deg, #00f2ff, #007AFF, #00f2ff);
+            background-size: 200% 100%;
             width: 0;
             transition: width 0.3s ease;
-            animation: shimmer 2s infinite;
+            animation: glow 2s linear infinite;
         }
 
-        @keyframes shimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
+        @keyframes glow {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
         }
 
         .results {
             display: none;
-            margin-top: 30px;
+            margin-top: 40px;
+            padding: 30px;
+            background: rgba(30, 41, 59, 0.3);
+            border-radius: 20px;
+            border: 1px solid rgba(0, 242, 255, 0.1);
         }
 
         .metric {
-            background: #f8f9ff;
-            border: 1px solid #e1e5f7;
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(0, 242, 255, 0.05);
             border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 15px;
+            padding: 15px 25px;
+            margin-bottom: 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .metric:hover {
+            background: rgba(15, 23, 42, 0.6);
+            border-color: rgba(0, 242, 255, 0.2);
         }
 
         .metric-label {
-            font-weight: 600;
-            color: #333;
+            font-weight: 500;
+            color: #94a3b8;
         }
 
         .metric-value {
-            font-family: 'SF Mono', Monaco, monospace;
+            font-family: 'Fira Code', 'SF Mono', Monaco, monospace;
             font-size: 1.1rem;
-            color: #007AFF;
-            font-weight: bold;
+            color: #00f2ff;
+            font-weight: 600;
+            text-shadow: 0 0 10px rgba(0, 242, 255, 0.3);
         }
 
         .status {
@@ -198,39 +264,39 @@
         }
 
         .status.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            background: rgba(0, 242, 255, 0.1);
+            color: #00f2ff;
+            border: 1px solid rgba(0, 242, 255, 0.2);
         }
 
         .status.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+            background: rgba(255, 77, 77, 0.1);
+            color: #ff4d4d;
+            border: 1px solid rgba(255, 77, 77, 0.2);
         }
 
         .status.info {
-            background: #cce7ff;
-            color: #004085;
-            border: 1px solid #b3d7ff;
+            background: rgba(0, 122, 255, 0.1);
+            color: #007AFF;
+            border: 1px solid rgba(0, 122, 255, 0.2);
         }
 
         .file-info {
-            background: #f8f9ff;
+            background: rgba(30, 41, 59, 0.3);
             border-radius: 12px;
             padding: 20px;
             margin: 20px 0;
-            border: 1px solid #e1e5f7;
+            border: 1px solid rgba(0, 242, 255, 0.1);
         }
 
         .file-name {
             font-weight: 600;
-            color: #333;
+            color: #00f2ff;
             margin-bottom: 5px;
         }
 
         .file-details {
-            color: #666;
+            color: #94a3b8;
             font-size: 0.9rem;
         }
 
@@ -238,8 +304,8 @@
             display: inline-block;
             width: 20px;
             height: 20px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #007AFF;
+            border: 2px solid rgba(0, 242, 255, 0.1);
+            border-top: 2px solid #00f2ff;
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin-right: 10px;
@@ -250,94 +316,54 @@
             100% { transform: rotate(360deg); }
         }
 
-        .footer {
-            text-align: center;
-            padding: 40px 0;
-            color: white;
-            opacity: 0.8;
-        }
-
         .logs-container {
-            margin-top: 20px;
+            margin-top: 30px;
             display: none;
+            border: 1px solid rgba(0, 242, 255, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
         }
 
         .logs-header {
-            background: linear-gradient(135deg, #2c3e50, #34495e);
-            color: white;
+            background: rgba(15, 23, 42, 0.9);
+            color: #00f2ff;
             padding: 15px 20px;
-            border-radius: 12px 12px 0 0;
             font-weight: 600;
             display: flex;
             justify-content: space-between;
             align-items: center;
             cursor: pointer;
-        }
-
-        .logs-header:hover {
-            background: linear-gradient(135deg, #34495e, #2c3e50);
-        }
-
-        .logs-toggle {
-            font-size: 1.2rem;
-            transition: transform 0.3s ease;
+            border-bottom: 1px solid rgba(0, 242, 255, 0.1);
         }
 
         .logs-content {
-            background: #2c3e50;
-            color: #ecf0f1;
-            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-            font-size: 0.9rem;
-            max-height: 400px;
+            background: #0a0e17;
+            color: #94a3b8;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.85rem;
+            max-height: 300px;
             overflow-y: auto;
-            border-radius: 0 0 12px 12px;
-            padding: 0;
-            line-height: 1.4;
+            padding: 10px 0;
         }
 
         .log-line {
-            padding: 8px 20px;
-            border-bottom: 1px solid #34495e;
-            word-wrap: break-word;
+            padding: 4px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
         }
 
-        .log-line:last-child {
-            border-bottom: none;
-        }
+        .log-line.success { color: #00f2ff; }
 
-        .log-line.info {
-            color: #3498db;
-        }
+        .log-line.error { color: #ff4d4d; }
 
-        .log-line.success {
-            color: #27ae60;
-        }
+        .log-line.info { color: #007AFF; }
 
-        .log-line.error {
-            color: #e74c3c;
-        }
+        .log-line.warning { color: #ffaa00; }
 
-        .log-line.warning {
-            color: #f39c12;
-        }
-
-        .log-line.exception {
-            color: #e74c3c;
-            font-weight: bold;
-        }
-
-        .log-line.start {
-            color: #9b59b6;
-            font-weight: bold;
-        }
-
-        .log-line.final {
-            color: #1abc9c;
-            font-weight: bold;
-        }
-
-        .log-line.metrics {
-            color: #f1c40f;
+        .footer {
+            text-align: center;
+            padding: 40px 0;
+            color: #64748b;
+            font-size: 0.9rem;
         }
 
         .lang-switcher {
@@ -350,27 +376,28 @@
         }
 
         .lang-btn {
-            background: rgba(255, 255, 255, 0.95);
-            border: 2px solid #007AFF;
-            color: #007AFF;
+            background: rgba(10, 14, 23, 0.8);
+            border: 1px solid rgba(0, 242, 255, 0.5);
+            color: #00f2ff;
             padding: 8px 16px;
             border-radius: 20px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
             font-size: 0.9rem;
+            backdrop-filter: blur(10px);
         }
 
         .lang-btn:hover {
-            background: #007AFF;
-            color: white;
+            background: rgba(0, 242, 255, 0.1);
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
         }
 
         .lang-btn.active {
-            background: #007AFF;
-            color: white;
+            background: #00f2ff;
+            color: #0a0e17;
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.5);
         }
 
         @media (max-width: 768px) {
@@ -415,51 +442,51 @@
         </div>
 
         <div class="card">
-            <h3 style="margin-bottom: 20px; color: #333;" data-i18n="examples_title">PyTorch Training Examples</h3>
-            <p style="margin-bottom: 20px; color: #666;" data-i18n="examples_subtitle">Download these examples to train and export your own models to ONNX</p>
-            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
-                <div style="flex: 1; min-width: 250px; background: #f8f9ff; padding: 20px; border-radius: 12px; border: 1px solid #e1e5f7; text-align: center;">
-                    <h4 style="margin-bottom: 10px;">MLP Model</h4>
-                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;" data-i18n="mlp_desc">Multi-Layer Perceptron for classification</p>
+            <h3 style="margin-bottom: 20px; color: #00f2ff;" data-i18n="examples_title">PyTorch Training Examples</h3>
+            <p style="margin-bottom: 20px; color: #94a3b8;" data-i18n="examples_subtitle">Download these examples to train and export your own models to ONNX</p>
+            <div class="examples-container">
+                <div class="example-item">
+                    <h4>MLP Model</h4>
+                    <p data-i18n="mlp_desc">Multi-Layer Perceptron for classification</p>
                     <div style="display: flex; gap: 5px; justify-content: center;">
-                        <a href="/download_example/mlp_example.py" class="btn btn-secondary" style="margin: 0; padding: 10px 15px; font-size: 0.85rem;" data-i18n="download_script">Download Script</a>
-                        <a href="/download_example/mlp_model.onnx" class="btn btn-success" style="margin: 0; padding: 10px 15px; font-size: 0.85rem;" data-i18n="download_onnx">Download ONNX</a>
+                        <a href="/download_example/mlp_example.py" class="btn btn-secondary" style="margin: 0; padding: 8px 12px; font-size: 0.8rem;" data-i18n="download_script">Download Script</a>
+                        <a href="/download_example/mlp_model.onnx" class="btn btn-success" style="margin: 0; padding: 8px 12px; font-size: 0.8rem;" data-i18n="download_onnx">Download ONNX</a>
                     </div>
                 </div>
-                <div style="flex: 1; min-width: 250px; background: #f8f9ff; padding: 20px; border-radius: 12px; border: 1px solid #e1e5f7; text-align: center;">
-                    <h4 style="margin-bottom: 10px;">CNN Model</h4>
-                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;" data-i18n="cnn_desc">Convolutional Neural Network for images</p>
+                <div class="example-item">
+                    <h4>CNN Model</h4>
+                    <p data-i18n="cnn_desc">Convolutional Neural Network for images</p>
                     <div style="display: flex; gap: 5px; justify-content: center;">
-                        <a href="/download_example/cnn_example.py" class="btn btn-secondary" style="margin: 0; padding: 10px 15px; font-size: 0.85rem;" data-i18n="download_script">Download Script</a>
-                        <a href="/download_example/cnn_model.onnx" class="btn btn-success" style="margin: 0; padding: 10px 15px; font-size: 0.85rem;" data-i18n="download_onnx">Download ONNX</a>
+                        <a href="/download_example/cnn_example.py" class="btn btn-secondary" style="margin: 0; padding: 8px 12px; font-size: 0.8rem;" data-i18n="download_script">Download Script</a>
+                        <a href="/download_example/cnn_model.onnx" class="btn btn-success" style="margin: 0; padding: 8px 12px; font-size: 0.8rem;" data-i18n="download_onnx">Download ONNX</a>
                     </div>
                 </div>
-                <div style="flex: 1; min-width: 250px; background: #f8f9ff; padding: 20px; border-radius: 12px; border: 1px solid #e1e5f7; text-align: center;">
-                    <h4 style="margin-bottom: 10px;">CNN1D Model</h4>
-                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;" data-i18n="cnn1d_desc">1D Convolutional Neural Network for time series</p>
+                <div class="example-item">
+                    <h4>CNN1D Model</h4>
+                    <p data-i18n="cnn1d_desc">1D Convolutional Neural Network for time series</p>
                     <div style="display: flex; gap: 5px; justify-content: center;">
-                        <a href="/download_example/cnn1d_example.py" class="btn btn-secondary" style="margin: 0; padding: 10px 15px; font-size: 0.85rem;" data-i18n="download_script">Download Script</a>
-                        <a href="/download_example/cnn1d_model.onnx" class="btn btn-success" style="margin: 0; padding: 10px 15px; font-size: 0.85rem;" data-i18n="download_onnx">Download ONNX</a>
+                        <a href="/download_example/cnn1d_example.py" class="btn btn-secondary" style="margin: 0; padding: 8px 12px; font-size: 0.8rem;" data-i18n="download_script">Download Script</a>
+                        <a href="/download_example/cnn1d_model.onnx" class="btn btn-success" style="margin: 0; padding: 8px 12px; font-size: 0.8rem;" data-i18n="download_onnx">Download ONNX</a>
                     </div>
                 </div>
-                <div style="flex: 1; min-width: 250px; background: #f8f9ff; padding: 20px; border-radius: 12px; border: 1px solid #e1e5f7; text-align: center;">
-                    <h4 style="margin-bottom: 10px;">LSTM Model</h4>
-                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;" data-i18n="lstm_desc">Long Short-Term Memory for sequences</p>
+                <div class="example-item">
+                    <h4>LSTM Model</h4>
+                    <p data-i18n="lstm_desc">Long Short-Term Memory for sequences</p>
                     <div style="display: flex; gap: 5px; justify-content: center;">
-                        <a href="/download_example/lstm_example.py" class="btn btn-secondary" style="margin: 0; padding: 10px 15px; font-size: 0.85rem;" data-i18n="download_script">Download Script</a>
-                        <a href="/download_example/lstm_model.onnx" class="btn btn-success" style="margin: 0; padding: 10px 15px; font-size: 0.85rem;" data-i18n="download_onnx">Download ONNX</a>
+                        <a href="/download_example/lstm_example.py" class="btn btn-secondary" style="margin: 0; padding: 8px 12px; font-size: 0.8rem;" data-i18n="download_script">Download Script</a>
+                        <a href="/download_example/lstm_model.onnx" class="btn btn-success" style="margin: 0; padding: 8px 12px; font-size: 0.8rem;" data-i18n="download_onnx">Download ONNX</a>
                     </div>
                 </div>
-                <div style="flex: 1; min-width: 250px; background: #f8f9ff; padding: 20px; border-radius: 12px; border: 1px solid #e1e5f7; text-align: center;">
-                    <h4 style="margin-bottom: 10px;">LSTM with H/C</h4>
-                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;" data-i18n="lstm_hc_desc">LSTM with initial hidden and cell states</p>
+                <div class="example-item">
+                    <h4>LSTM with H/C</h4>
+                    <p data-i18n="lstm_hc_desc">LSTM with initial hidden and cell states</p>
                     <div style="display: flex; gap: 5px; justify-content: center;">
-                        <a href="/download_example/lstm_with_hc_example.py" class="btn btn-secondary" style="margin: 0; padding: 10px 15px; font-size: 0.85rem;" data-i18n="download_script">Download Script</a>
-                        <a href="/download_example/lstm_with_hc.onnx" class="btn btn-success" style="margin: 0; padding: 10px 15px; font-size: 0.85rem;" data-i18n="download_onnx">Download ONNX</a>
+                        <a href="/download_example/lstm_with_hc_example.py" class="btn btn-secondary" style="margin: 0; padding: 8px 12px; font-size: 0.8rem;" data-i18n="download_script">Download Script</a>
+                        <a href="/download_example/lstm_with_hc.onnx" class="btn btn-success" style="margin: 0; padding: 8px 12px; font-size: 0.8rem;" data-i18n="download_onnx">Download ONNX</a>
                     </div>
                 </div>
             </div>
-            <hr style="margin: 30px 0; border: 0; border-top: 1px solid #eee;">
+            <hr style="margin: 30px 0; border: 0; border-top: 1px solid rgba(0, 242, 255, 0.1);">
             <div class="upload-zone" id="uploadZone">
                 <div class="upload-icon">📁</div>
                 <div class="upload-text" data-i18n="upload_text">Drop your ONNX file here or click to browse</div>
@@ -487,7 +514,7 @@
             </div>
 
             <div class="results" id="results">
-                <h3 style="margin-bottom: 20px; color: #333;" data-i18n="results_title">Model Validation Results</h3>
+                <h3 style="margin-bottom: 20px; color: #00f2ff;" data-i18n="results_title">Model Validation Results</h3>
                 
                 <div class="metric">
                     <span class="metric-label" data-i18n="avg_rel_error">Average Relative Error:</span>
