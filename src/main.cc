@@ -15,7 +15,7 @@ int main(int argc, const char* argv[])
 
 	parse_cmdline_options(argc, argv);
 
-	std::ifstream input(options.input_file);
+	std::ifstream input(options.input_file, std::ios::binary);
 	if (!input.good()) {
 		std::cerr << "Error opening input file: \"" << options.input_file << "\"" << std::endl;
 		exit(1); //	TODO: check out error numbers for a more accurate one
