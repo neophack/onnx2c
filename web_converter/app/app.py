@@ -68,26 +68,215 @@ def periodic_cleanup():
 cleanup_thread = threading.Thread(target=periodic_cleanup, daemon=True)
 cleanup_thread.start()
 
+# Global dictionary to store task status and logs
+tasks = {}
+tasks_lock = threading.Lock()
+
+def add_log(task_id, message):
+    """Add a log message to a specific task"""
+    with tasks_lock:
+        if task_id in tasks:
+            tasks[task_id]['logs'].append(message)
+            # Also print to console for debugging
+            print(f"[{task_id}] {message}")
+
+def update_task_status(task_id, status, result=None, error=None):
+    """Update the status and result of a specific task"""
+    with tasks_lock:
+        if task_id in tasks:
+            tasks[task_id]['status'] = status
+            if result is not None:
+                tasks[task_id]['result'] = result
+            if error is not None:
+                tasks[task_id]['error'] = error
+
+def background_conversion(task_id, upload_path, filename, conversion_id):
+    """Perform model conversion in the background"""
+    try:
+        execution_logs = []
+        def log_msg(msg):
+            add_log(task_id, msg)
+            execution_logs.append(msg)
+
+        log_msg(f"[START] Starting conversion process for {filename}")
+        log_msg(f"[INFO] Conversion ID: {conversion_id}")
+        log_msg(f"[INFO] File saved to: {upload_path}")
+        
+        # Convert to C
+        c_output_path = os.path.join(app.config['GENERATED_FOLDER'], f"{conversion_id}_generated.c")
+        success, message, conv_logs = run_onnx2c(upload_path, c_output_path)
+        for l in conv_logs: log_msg(l)
+        
+        if not success:
+            log_msg(f"[FINAL] Conversion failed: {message}")
+            update_task_status(task_id, 'failed', error=f'Conversion failed: {message}', result={'logs': execution_logs})
+            return
+        
+        # Generate main.c
+        main_c_path = os.path.join(app.config['GENERATED_FOLDER'], f"{conversion_id}_main.c")
+        log_msg(f"[INFO] Generating main.c file: {main_c_path}")
+        create_main_c(main_c_path, conversion_id, upload_path)
+        log_msg(f"[SUCCESS] Main.c file generated successfully")
+        
+        # Compile the model
+        executable_path = os.path.join(app.config['GENERATED_FOLDER'], f"{conversion_id}_model")
+        compile_success, compile_message, compile_logs, mcu_resources = compile_c_model(c_output_path, main_c_path, executable_path)
+        for l in compile_logs: log_msg(l)
+        
+        if not compile_success:
+            log_msg(f"[FINAL] Compilation failed: {compile_message}")
+            update_task_status(task_id, 'failed', error=f'Compilation failed: {compile_message}', result={'logs': execution_logs})
+            return
+            
+        # Add MCU resources to perf_metrics later
+        log_msg(f"[INFO] MCU Resource Estimates: ROM={mcu_resources['rom']} bytes, RAM={mcu_resources['ram']} bytes")
+        
+        # Get model information
+        log_msg("[INFO] Extracting model information...")
+        model_info = get_model_info(upload_path)
+        if model_info:
+            log_msg(f"[SUCCESS] Model info extracted: {model_info['total_nodes']} nodes, {len(model_info['inputs'])} inputs, {len(model_info['outputs'])} outputs")
+        else:
+            log_msg("[WARNING] Failed to extract model information")
+        
+        # Generate test data and run validation
+        log_msg("[INFO] Generating test data for validation...")
+        inputs, input_shapes = generate_random_inputs(upload_path, 10)
+        
+        validation_report = {
+            'status': 'not_run',
+            'message': 'Validation not performed',
+            'metrics': None,
+            'error': None
+        }
+        
+        if inputs and len(inputs) > 0:
+            log_msg(f"[SUCCESS] Generated {len(inputs)} test samples")
+            
+            try:
+                # Run ONNX inference
+                log_msg(f"[INFO] Running ONNX inference with {len(inputs)} samples...")
+                onnx_results, onnx_logs = run_onnx_inference(upload_path, inputs)
+                for l in onnx_logs: log_msg(l)
+                
+                if onnx_results is None or len(onnx_results) == 0:
+                    log_msg(f"[ERROR] ONNX inference failed - got {len(onnx_results) if onnx_results else 0} results")
+                else:
+                    log_msg(f"[SUCCESS] ONNX inference completed, got {len(onnx_results)} results")
+                
+                # Run C inference
+                log_msg(f"[INFO] Running C inference with {len(inputs)} samples...")
+                c_results, c_logs, perf_metrics = run_c_inference(executable_path, inputs)
+                for l in c_logs: log_msg(l)
+                
+                # Merge MCU resources into perf_metrics
+                if perf_metrics and mcu_resources:
+                    perf_metrics['mcu_rom'] = mcu_resources['rom']
+                    perf_metrics['mcu_ram'] = mcu_resources['ram']
+                
+                if onnx_results and c_results:
+                    log_msg("[INFO] Calculating validation metrics...")
+                    # Calculate metrics
+                    metrics = calculate_metrics(onnx_results, c_results, perf_metrics)
+                    if metrics:
+                        log_msg("[SUCCESS] Validation metrics calculated successfully")
+                        log_msg(f"[METRICS] MAE: {metrics['overall_metrics']['mae']:.2e}")
+                        log_msg(f"[METRICS] Max Error: {metrics['overall_metrics']['max_absolute_error']:.2e}")
+                        log_msg(f"[METRICS] Avg Rel Error: {metrics['overall_metrics']['avg_relative_error']:.2e}")
+                        
+                        validation_report = {
+                            'status': 'success',
+                            'message': f'Validation completed with {len(inputs)} test samples',
+                            'metrics': metrics,
+                            'error': None
+                        }
+                    else:
+                        log_msg("[ERROR] Failed to calculate validation metrics")
+                        validation_report = {
+                            'status': 'failed',
+                            'message': 'Failed to calculate validation metrics',
+                            'metrics': None,
+                            'error': 'Metrics calculation failed'
+                        }
+                else:
+                    log_msg(f"[ERROR] Inference comparison failed - ONNX: {len(onnx_results)}, C: {len(c_results)}")
+                    validation_report = {
+                        'status': 'failed',
+                        'message': 'Failed to run inference comparison',
+                        'metrics': None,
+                        'error': f'ONNX results: {len(onnx_results) if onnx_results else 0}, C results: {len(c_results) if c_results else 0}'
+                    }
+            except Exception as e:
+                log_msg(f"[EXCEPTION] Validation error: {str(e)}")
+                validation_report = {
+                    'status': 'error',
+                    'message': f'Validation error: {str(e)}',
+                    'metrics': None,
+                    'error': str(e)
+                }
+        else:
+            log_msg("[WARNING] No test inputs generated - validation skipped")
+            validation_report = {
+                'status': 'skipped',
+                'message': 'No test inputs generated - validation skipped',
+                'metrics': None,
+                'error': 'Failed to generate test inputs'
+            }
+        
+        log_msg("[FINAL] Conversion process completed successfully")
+        
+        # Store final result
+        result = {
+            'conversion_id': conversion_id,
+            'filename': filename,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'execution_logs': execution_logs,
+            'validation': validation_report,
+            'model_info': model_info,
+            'files': {
+                'c_file': f"{conversion_id}_generated.c",
+                'main_file': f"{conversion_id}_main.c",
+                'executable': f"{conversion_id}_model"
+            }
+        }
+        
+        # Save result to file for report route
+        result_path = os.path.join(app.config['GENERATED_FOLDER'], f"{conversion_id}_result.json")
+        try:
+            with open(result_path, 'w') as f:
+                json.dump(result, f)
+            log_msg(f"[INFO] Result saved to {result_path}")
+        except Exception as e:
+            log_msg(f"[ERROR] Failed to save result to {result_path}: {e}")
+            
+        update_task_status(task_id, 'completed', result=result)
+        
+    except Exception as e:
+        error_msg = f"Unexpected error during background conversion: {str(e)}"
+        print(error_msg)
+        update_task_status(task_id, 'failed', error=error_msg)
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() == 'onnx'
 
 def run_onnx2c(input_file, output_file):
     """Run onnx2c converter"""
     try:
-        cmd = [ONNX2C_PATH, input_file]
-        cmd_str = ' '.join(cmd)
         log_lines = []
-        log_lines.append(f"[INFO] Running command: {cmd_str}")
-        log_lines.append(f"[INFO] Input file: {input_file}")
-        log_lines.append(f"[INFO] Output file: {output_file}")
-        
-        with open(output_file, 'w') as f:
-            result = subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, text=True)
+        # Use file object for redirection - more "Pythonic" and just as fast as shell redirection
+        # while avoiding shell=True security/portability issues.
+        # -l0 suppresses verbose logging to stderr, which was the other bottleneck.
+        with open(output_file, 'w') as f_out:
+            cmd = [ONNX2C_PATH, input_file, "-l0"]
+            log_lines.append(f"[INFO] Running command: {' '.join(cmd)} > {output_file}")
+            
+            result = subprocess.run(cmd, stdout=f_out, stderr=subprocess.PIPE, text=True)
         
         if result.returncode != 0:
             log_lines.append(f"[ERROR] Command failed with return code: {result.returncode}")
-            log_lines.append(f"[ERROR] Error output: {result.stderr}")
-            return False, result.stderr, log_lines
+            if result.stderr:
+                log_lines.append(f"[ERROR] Error output: {result.stderr}")
+            return False, result.stderr or "Unknown error", log_lines
         
         log_lines.append("[SUCCESS] ONNX to C conversion completed successfully")
         return True, "Success", log_lines
@@ -527,6 +716,21 @@ def download_example(filename):
     else:
         return "Example file not found", 404
 
+@app.route('/task_status/<task_id>')
+def task_status(task_id):
+    """Get the current status and logs of a task"""
+    with tasks_lock:
+        if task_id not in tasks:
+            return jsonify({'error': 'Task not found'}), 404
+        
+        task = tasks[task_id]
+        return jsonify({
+            'status': task['status'],
+            'logs': task['logs'],
+            'result': task.get('result'),
+            'error': task.get('error')
+        })
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     if 'file' not in request.files:
@@ -539,167 +743,35 @@ def upload_file():
     if file and allowed_file(file.filename):
         # Generate unique ID for this conversion
         conversion_id = str(uuid.uuid4())
-        execution_logs = []
-        
-        execution_logs.append(f"[START] Starting conversion process for {file.filename}")
-        execution_logs.append(f"[INFO] Conversion ID: {conversion_id}")
+        task_id = conversion_id # Use same ID for task
         
         # Save uploaded file
         filename = secure_filename(file.filename)
         upload_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{conversion_id}_{filename}")
         file.save(upload_path)
-        execution_logs.append(f"[INFO] File saved to: {upload_path}")
         
-        # Convert to C
-        c_output_path = os.path.join(app.config['GENERATED_FOLDER'], f"{conversion_id}_generated.c")
-        success, message, conv_logs = run_onnx2c(upload_path, c_output_path)
-        execution_logs.extend(conv_logs)
-        
-        if not success:
-            execution_logs.append(f"[FINAL] Conversion failed: {message}")
-            return jsonify({
-                'error': f'Conversion failed: {message}',
-                'logs': execution_logs
-            })
-        
-        # Generate main.c
-        main_c_path = os.path.join(app.config['GENERATED_FOLDER'], f"{conversion_id}_main.c")
-        execution_logs.append(f"[INFO] Generating main.c file: {main_c_path}")
-        create_main_c(main_c_path, conversion_id, upload_path)
-        execution_logs.append(f"[SUCCESS] Main.c file generated successfully")
-        
-        # Compile the model
-        executable_path = os.path.join(app.config['GENERATED_FOLDER'], f"{conversion_id}_model")
-        compile_success, compile_message, compile_logs, mcu_resources = compile_c_model(c_output_path, main_c_path, executable_path)
-        execution_logs.extend(compile_logs)
-        
-        if not compile_success:
-            execution_logs.append(f"[FINAL] Compilation failed: {compile_message}")
-            return jsonify({
-                'error': f'Compilation failed: {compile_message}',
-                'logs': execution_logs
-            })
-            
-        # Add MCU resources to perf_metrics later
-        execution_logs.append(f"[INFO] MCU Resource Estimates: ROM={mcu_resources['rom']} bytes, RAM={mcu_resources['ram']} bytes")
-        
-        # Get model information
-        execution_logs.append("[INFO] Extracting model information...")
-        model_info = get_model_info(upload_path)
-        if model_info:
-            execution_logs.append(f"[SUCCESS] Model info extracted: {model_info['total_nodes']} nodes, {len(model_info['inputs'])} inputs, {len(model_info['outputs'])} outputs")
-        else:
-            execution_logs.append("[WARNING] Failed to extract model information")
-        
-        # Generate test data and run validation
-        execution_logs.append("[INFO] Generating test data for validation...")
-        inputs, input_shapes = generate_random_inputs(upload_path, 10)
-        
-        validation_report = {
-            'status': 'not_run',
-            'message': 'Validation not performed',
-            'metrics': None,
-            'error': None
-        }
-        
-        if inputs and len(inputs) > 0:
-            execution_logs.append(f"[SUCCESS] Generated {len(inputs)} test samples")
-            
-            try:
-                # Run ONNX inference
-                execution_logs.append(f"[INFO] Running ONNX inference with {len(inputs)} samples...")
-                onnx_results, onnx_logs = run_onnx_inference(upload_path, inputs)
-                execution_logs.extend(onnx_logs)
-                
-                if onnx_results is None or len(onnx_results) == 0:
-                    execution_logs.append(f"[ERROR] ONNX inference failed - got {len(onnx_results) if onnx_results else 0} results")
-                else:
-                    execution_logs.append(f"[SUCCESS] ONNX inference completed, got {len(onnx_results)} results")
-                
-                # Run C inference
-                execution_logs.append(f"[INFO] Running C inference with {len(inputs)} samples...")
-                c_results, c_logs, perf_metrics = run_c_inference(executable_path, inputs)
-                execution_logs.extend(c_logs)
-                
-                # Merge MCU resources into perf_metrics
-                if perf_metrics and mcu_resources:
-                    perf_metrics['mcu_rom'] = mcu_resources['rom']
-                    perf_metrics['mcu_ram'] = mcu_resources['ram']
-                
-                if onnx_results and c_results:
-                    execution_logs.append("[INFO] Calculating validation metrics...")
-                    # Calculate metrics
-                    metrics = calculate_metrics(onnx_results, c_results, perf_metrics)
-                    if metrics:
-                        execution_logs.append("[SUCCESS] Validation metrics calculated successfully")
-                        execution_logs.append(f"[METRICS] MAE: {metrics['overall_metrics']['mae']:.2e}")
-                        execution_logs.append(f"[METRICS] Max Error: {metrics['overall_metrics']['max_absolute_error']:.2e}")
-                        execution_logs.append(f"[METRICS] Avg Rel Error: {metrics['overall_metrics']['avg_relative_error']:.2e}")
-                        
-                        validation_report = {
-                            'status': 'success',
-                            'message': f'Validation completed with {len(inputs)} test samples',
-                            'metrics': metrics,
-                            'error': None
-                        }
-                    else:
-                        execution_logs.append("[ERROR] Failed to calculate validation metrics")
-                        validation_report = {
-                            'status': 'failed',
-                            'message': 'Failed to calculate validation metrics',
-                            'metrics': None,
-                            'error': 'Metrics calculation failed'
-                        }
-                else:
-                    execution_logs.append(f"[ERROR] Inference comparison failed - ONNX: {len(onnx_results)}, C: {len(c_results)}")
-                    validation_report = {
-                        'status': 'failed',
-                        'message': 'Failed to run inference comparison',
-                        'metrics': None,
-                        'error': f'ONNX results: {len(onnx_results) if onnx_results else 0}, C results: {len(c_results) if c_results else 0}'
-                    }
-            except Exception as e:
-                execution_logs.append(f"[EXCEPTION] Validation error: {str(e)}")
-                validation_report = {
-                    'status': 'error',
-                    'message': f'Validation error: {str(e)}',
-                    'metrics': None,
-                    'error': str(e)
-                }
-        else:
-            execution_logs.append("[WARNING] No test inputs generated - validation skipped")
-            validation_report = {
-                'status': 'skipped',
-                'message': 'No test inputs generated - validation skipped',
-                'metrics': None,
-                'error': 'Failed to generate test inputs'
+        # Initialize task
+        with tasks_lock:
+            tasks[task_id] = {
+                'status': 'in_progress',
+                'logs': [],
+                'result': None,
+                'error': None,
+                'start_time': time.time()
             }
         
-        execution_logs.append("[FINAL] Conversion process completed successfully")
+        # Start background conversion
+        thread = threading.Thread(
+            target=background_conversion,
+            args=(task_id, upload_path, filename, conversion_id)
+        )
+        thread.start()
         
-        # Create comprehensive result data
-        result = {
+        return jsonify({
+            'task_id': task_id,
             'conversion_id': conversion_id,
-            'filename': filename,
-            'timestamp': datetime.now().isoformat(),
-            'success': True,
-            'model_info': model_info,
-            'input_shapes': input_shapes,
-            'validation': validation_report,
-            'execution_logs': execution_logs,
-            'files': {
-                'c_file': f"{conversion_id}_generated.c",
-                'main_file': f"{conversion_id}_main.c",
-                'executable': f"{conversion_id}_model"
-            }
-        }
-        
-        # Save result metadata
-        result_path = os.path.join(app.config['GENERATED_FOLDER'], f"{conversion_id}_result.json")
-        with open(result_path, 'w') as f:
-            json.dump(result, f, indent=2)
-        
-        return jsonify(result)
+            'status': 'started'
+        })
     
     return jsonify({'error': 'Invalid file type. Please upload an ONNX file.'})
 

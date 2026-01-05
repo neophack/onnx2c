@@ -974,6 +974,34 @@
             }
         }
 
+        async function pollStatus(taskId) {
+            const interval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/task_status/${taskId}`);
+                    const data = await response.json();
+
+                    if (data.logs) {
+                        displayLogs(data.logs);
+                    }
+
+                    if (data.status === 'completed') {
+                        clearInterval(interval);
+                        hideProgress();
+                        updateResults(data.result);
+                        showStatus(langManager.t('conversion_success'), 'success');
+                    } else if (data.status === 'failed') {
+                        clearInterval(interval);
+                        hideProgress();
+                        showStatus(`${langManager.t('conversion_failed')} ${data.error || 'Unknown error'}`, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error polling status:', error);
+                }
+            }, 500); // Poll every 500ms for real-time feel
+            
+            return interval;
+        }
+
         async function handleFile(file) {
             if (!file.name.endsWith('.onnx')) {
                 showStatus(langManager.t('file_error'), 'error');
@@ -987,7 +1015,8 @@
             downloadBtn.style.display = 'none';
             downloadMainBtn.style.display = 'none';
             downloadExeBtn.style.display = 'none';
-            logsContainer.style.display = 'none'; // Hide logs initially
+            logsContainer.style.display = 'block';
+            logsContent.innerHTML = '<div class="log-line info">[UPLOAD] Uploading file...</div>';
 
             const formData = new FormData();
             formData.append('file', file);
@@ -1001,18 +1030,14 @@
                 const data = await response.json();
 
                 if (data.error) {
-                    // Display logs if available even for errors
-                    if (data.logs) {
-                        displayLogs(data.logs);
-                    }
                     showStatus(`${langManager.t('conversion_failed')} ${data.error}`, 'error');
+                    hideProgress();
                 } else {
                     currentConversionId = data.conversion_id;
-                    updateResults(data);
+                    pollStatus(data.task_id);
                 }
             } catch (error) {
                 showStatus(`${langManager.t('request_error')} ${error.message}`, 'error');
-            } finally {
                 hideProgress();
             }
         }
