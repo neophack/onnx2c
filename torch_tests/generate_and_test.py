@@ -135,19 +135,19 @@ def run_onnx2c(onnx_path, c_path, onnx2c_bin):
     if not os.path.exists(onnx_path):
         return False, "ONNX file not found"
     try:
-        result = subprocess.run(
-            [onnx2c_bin, onnx_path],
-            capture_output=True,
-            text=True,
-            check=False,
-            encoding='utf-8',
-            errors='ignore',
-            timeout=30  # 添加超时
-        )
+        # 使用文件对象重定向 stdout，并添加 -l0 抑制冗余日志
+        with open(c_path, 'w') as f_out:
+            cmd = [onnx2c_bin, onnx_path, "-l0"]
+            result = subprocess.run(
+                cmd,
+                stdout=f_out,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False,
+                timeout=30
+            )
         
         if result.returncode == 0:
-            with open(c_path, 'w') as f:
-                f.write(result.stdout)
             return True, ""
         else:
             return False, result.stderr
