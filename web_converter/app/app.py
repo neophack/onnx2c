@@ -97,8 +97,12 @@ def run_onnx2c(input_file, output_file):
         return False, error_msg, log_lines
 
 def compile_c_model(c_file, main_file, executable):
-    """Compile C model with main.c"""
+    """Compile C model with main.c and estimate resources"""
     log_lines = []
+    mcu_resources = {
+        'rom': 0,
+        'ram': 0
+    }
     try:
         # Compile the generated C file as object file first
         obj_file = c_file.replace('.c', '.o')
@@ -113,12 +117,44 @@ def compile_c_model(c_file, main_file, executable):
             log_lines.append(f"[ERROR] Compiler output: {result_obj.stderr}")
             if result_obj.stdout:
                 log_lines.append(f"[INFO] Compiler stdout: {result_obj.stdout}")
-            return False, f"Object compilation failed: {result_obj.stderr}", log_lines
+            return False, f"Object compilation failed: {result_obj.stderr}", log_lines, None
         
         log_lines.append("[SUCCESS] Object file compiled successfully")
-        if result_obj.stdout:
-            log_lines.append(f"[INFO] Compiler stdout: {result_obj.stdout}")
         
+        # Estimate resources using size tool
+        try:
+            # Use Berkeley format for size output
+            cmd_size = ['size', '-A', obj_file]
+            result_size = subprocess.run(cmd_size, capture_output=True, text=True)
+            if result_size.returncode == 0:
+                log_lines.append(f"[INFO] Size output:\n{result_size.stdout}")
+                # Parse section sizes
+                rom_sections = ['.text', '.rodata']
+                ram_sections = ['.data', '.bss']
+                
+                rom_total = 0
+                ram_total = 0
+                
+                for line in result_size.stdout.split('\n'):
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        section_name = parts[0]
+                        try:
+                            section_size = int(parts[1])
+                            if any(section_name.startswith(s) for s in rom_sections):
+                                rom_total += section_size
+                            elif any(section_name.startswith(s) for s in ram_sections):
+                                ram_total += section_size
+                        except ValueError:
+                            continue
+                
+                mcu_resources['rom'] = rom_total
+                mcu_resources['ram'] = ram_total
+                log_lines.append(f"[MCU] Estimated ROM (Code + Read-only data): {rom_total} bytes")
+                log_lines.append(f"[MCU] Estimated RAM (Data + BSS): {ram_total} bytes")
+        except Exception as e:
+            log_lines.append(f"[WARNING] Could not estimate MCU resources: {e}")
+
         # Then compile main.c and link with object file
         cmd_link = ['gcc', '-O2', '-ffast-math', main_file, obj_file, '-o', executable, '-lm']
         cmd_link_str = ' '.join(cmd_link)
@@ -129,19 +165,14 @@ def compile_c_model(c_file, main_file, executable):
         if result_link.returncode != 0:
             log_lines.append(f"[ERROR] Linking failed with return code: {result_link.returncode}")
             log_lines.append(f"[ERROR] Linker output: {result_link.stderr}")
-            if result_link.stdout:
-                log_lines.append(f"[INFO] Linker stdout: {result_link.stdout}")
-            return False, f"Linking failed: {result_link.stderr}", log_lines
+            return False, f"Linking failed: {result_link.stderr}", log_lines, None
         
         log_lines.append("[SUCCESS] Executable linked successfully")
-        if result_link.stdout:
-            log_lines.append(f"[INFO] Linker stdout: {result_link.stdout}")
-        
-        return True, "Success", log_lines
+        return True, "Success", log_lines, mcu_resources
     except Exception as e:
         error_msg = str(e)
         log_lines.append(f"[EXCEPTION] Error during compilation: {error_msg}")
-        return False, error_msg, log_lines
+        return False, error_msg, log_lines, None
 
 def generate_random_inputs(model_path, num_samples=10):
     """Generate random inputs based on ONNX model input shapes"""
@@ -224,6 +255,8 @@ def run_c_inference(executable, inputs):
     log_lines = []
     try:
         results = []
+        inference_times = []
+        memory_usages = []
         log_lines.append(f"[INFO] Starting C inference with {len(inputs)} samples")
         log_lines.append(f"[INFO] Executable: {executable}")
         
@@ -234,7 +267,7 @@ def run_c_inference(executable, inputs):
             with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as f:
                 total_elements = 0
                 for input_data in sample_inputs:
-                    np.savetxt(f, input_data.flatten(), fmt='%.8f')
+                    np.savetxt(f, input_data.flatten(), fmt='%.15g')
                     total_elements += input_data.size
                 input_file = f.name
                 log_lines.append(f"[INFO] Created input file {input_file} with {total_elements} elements")
@@ -250,6 +283,20 @@ def run_c_inference(executable, inputs):
                 if result.returncode == 0:
                     log_lines.append(f"[SUCCESS] Sample {i+1} executed successfully")
                     
+                    # Parse metrics from stderr
+                    stderr_content = result.stderr
+                    for line in stderr_content.split('\n'):
+                        if '[METRICS] time:' in line:
+                            try:
+                                t = float(line.split('time:')[1].split('s')[0].strip())
+                                inference_times.append(t)
+                            except: pass
+                        if '[METRICS] memory:' in line:
+                            try:
+                                m = int(line.split('memory:')[1].split('KB')[0].strip())
+                                memory_usages.append(m)
+                            except: pass
+
                     # Parse output
                     output_lines = result.stdout.strip().split('\n')
                     output_data = []
@@ -281,11 +328,14 @@ def run_c_inference(executable, inputs):
                     log_lines.append(f"[INFO] Cleaned up input file {input_file}")
         
         log_lines.append(f"[SUCCESS] C inference completed for all {len(inputs)} samples")
-        return results, log_lines
+        return results, log_lines, {
+            'times': inference_times,
+            'memory': memory_usages
+        }
     except Exception as e:
         error_msg = str(e)
         log_lines.append(f"[EXCEPTION] Error in C inference: {error_msg}")
-        return [], log_lines
+        return [], log_lines, None
 
 def get_model_info(model_path):
     """Get detailed model information"""
@@ -350,8 +400,8 @@ def get_model_info(model_path):
         print(f"Error getting model info: {e}")
         return None
 
-def calculate_metrics(onnx_results, c_results):
-    """Calculate comparison metrics"""
+def calculate_metrics(onnx_results, c_results, perf_metrics=None):
+    """Calculate comparison metrics and performance metrics"""
     if not onnx_results or not c_results or len(onnx_results) != len(c_results):
         return None
     
@@ -418,6 +468,20 @@ def calculate_metrics(onnx_results, c_results):
         mse = float(np.mean(absolute_errors ** 2))
         rmse = float(np.sqrt(mse))
         
+        # Performance metrics
+        avg_time = 0
+        max_time = 0
+        mcu_rom = 0
+        mcu_ram = 0
+        if perf_metrics:
+            if perf_metrics['times']:
+                avg_time = float(np.mean(perf_metrics['times']))
+                max_time = float(np.max(perf_metrics['times']))
+            if 'mcu_rom' in perf_metrics:
+                mcu_rom = perf_metrics['mcu_rom']
+            if 'mcu_ram' in perf_metrics:
+                mcu_ram = perf_metrics['mcu_ram']
+
         # Calculate percentiles for error distribution
         error_percentiles = {
             '50th': float(np.percentile(absolute_errors, 50)),
@@ -428,12 +492,16 @@ def calculate_metrics(onnx_results, c_results):
         
         return {
             'overall_metrics': {
-                'avg_relative_error': round(avg_rel_error, 8),
-                'max_relative_error': round(max_rel_error, 8),
-                'mae': round(mae, 8),
-                'max_absolute_error': round(max_abs_error, 8),
-                'mse': round(mse, 8),
-                'rmse': round(rmse, 8),
+                'avg_relative_error': float(avg_rel_error),
+                'max_relative_error': float(max_rel_error),
+                'mae': float(mae),
+                'max_absolute_error': float(max_abs_error),
+                'mse': float(mse),
+                'rmse': float(rmse),
+                'avg_time': avg_time,
+                'max_time': max_time,
+                'mcu_rom': mcu_rom,
+                'mcu_ram': mcu_ram,
                 'num_samples': len(onnx_results),
                 'num_elements': len(absolute_errors)
             },
@@ -502,7 +570,7 @@ def upload_file():
         
         # Compile the model
         executable_path = os.path.join(app.config['GENERATED_FOLDER'], f"{conversion_id}_model")
-        compile_success, compile_message, compile_logs = compile_c_model(c_output_path, main_c_path, executable_path)
+        compile_success, compile_message, compile_logs, mcu_resources = compile_c_model(c_output_path, main_c_path, executable_path)
         execution_logs.extend(compile_logs)
         
         if not compile_success:
@@ -511,6 +579,9 @@ def upload_file():
                 'error': f'Compilation failed: {compile_message}',
                 'logs': execution_logs
             })
+            
+        # Add MCU resources to perf_metrics later
+        execution_logs.append(f"[INFO] MCU Resource Estimates: ROM={mcu_resources['rom']} bytes, RAM={mcu_resources['ram']} bytes")
         
         # Get model information
         execution_logs.append("[INFO] Extracting model information...")
@@ -547,13 +618,18 @@ def upload_file():
                 
                 # Run C inference
                 execution_logs.append(f"[INFO] Running C inference with {len(inputs)} samples...")
-                c_results, c_logs = run_c_inference(executable_path, inputs)
+                c_results, c_logs, perf_metrics = run_c_inference(executable_path, inputs)
                 execution_logs.extend(c_logs)
+                
+                # Merge MCU resources into perf_metrics
+                if perf_metrics and mcu_resources:
+                    perf_metrics['mcu_rom'] = mcu_resources['rom']
+                    perf_metrics['mcu_ram'] = mcu_resources['ram']
                 
                 if onnx_results and c_results:
                     execution_logs.append("[INFO] Calculating validation metrics...")
                     # Calculate metrics
-                    metrics = calculate_metrics(onnx_results, c_results)
+                    metrics = calculate_metrics(onnx_results, c_results, perf_metrics)
                     if metrics:
                         execution_logs.append("[SUCCESS] Validation metrics calculated successfully")
                         execution_logs.append(f"[METRICS] MAE: {metrics['overall_metrics']['mae']:.2e}")
@@ -670,9 +746,11 @@ def get_report(conversion_id):
                 report = json.load(f)
             return render_template('report.html', report=report)
         except Exception as e:
-            return jsonify({'error': f'Failed to load report: {str(e)}'})
+            # If there's an error loading, still redirect or show error
+            return redirect(url_for('index'))
     
-    return jsonify({'error': 'Report not found'})
+    # Redirect to home if report not found
+    return redirect(url_for('index'))
 
 @app.route('/api/report/<conversion_id>')
 def get_report_json(conversion_id):
@@ -777,7 +855,7 @@ def create_main_c(output_path, conversion_id, model_path):
     for i, out in enumerate(outputs_info):
         shape_str = ''.join(f'[{dim}]' for dim in out['shape'])
         output_declarations.append(f"    float output_{i}{shape_str};")
-        output_prints.append(f"    // Print output {i}\n    for (int j = 0; j < {out['size']}; j++) {{\n        printf(\"%.8f\\n\", ((float*)output_{i})[j]);\n    }}")
+        output_prints.append(f"    // Print output {i}\n    for (int j = 0; j < {out['size']}; j++) {{\n        printf(\"%.15g\\n\", ((float*)output_{i})[j]);\n    }}")
         output_params.append(f"output_{i}")
     
     input_decl_str = '\n'.join(input_declarations)
@@ -792,9 +870,24 @@ def create_main_c(output_path, conversion_id, model_path):
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
+
+#ifdef __linux__
+#include <sys/resource.h>
+#endif
 
 // Forward declaration of the generated model entry function
 extern void entry({', '.join([f'const float {inp["name"]}' + ''.join(f'[{dim}]' for dim in inp["shape"]) for inp in inputs_info])}, {', '.join([f'float {out["name"]}' + ''.join(f'[{dim}]' for dim in out["shape"]) for out in outputs_info])});
+
+long get_max_rss() {{
+#ifdef __linux__
+    struct rusage usage;
+    getrusage(RUSAGE_SELF, &usage);
+    return usage.ru_maxrss; // in kilobytes
+#else
+    return 0;
+#endif
+}}
 
 int main(int argc, char* argv[]) {{
     if (argc != 2) {{
@@ -821,11 +914,22 @@ int main(int argc, char* argv[]) {{
     
     fclose(input_file);
     
+    // Measure inference time
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    
     // Call the entry function
     entry({input_params_str}, {output_params_str});
     
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    double time_used = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+    
     // Print results
 {output_print_str}
+    
+    // Print timing and memory info to stderr
+    fprintf(stderr, "\\n[METRICS] time: %.6f s\\n", time_used);
+    fprintf(stderr, "[METRICS] memory: %ld KB\\n", get_max_rss());
     
     return 0;
 }}'''

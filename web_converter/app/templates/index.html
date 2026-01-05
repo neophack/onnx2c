@@ -540,6 +540,26 @@
                     <span class="metric-label" data-i18n="mse">Mean Squared Error (MSE):</span>
                     <span class="metric-value" id="mse">-</span>
                 </div>
+
+                <div class="metric" id="timeMetric">
+                    <span class="metric-label" data-i18n="avg_time">Average Inference Time:</span>
+                    <span class="metric-value" id="avgTime">-</span>
+                </div>
+
+                <div class="metric" id="maxTimeMetric">
+                    <span class="metric-label" data-i18n="max_time">Maximum Inference Time:</span>
+                    <span class="metric-value" id="maxTime">-</span>
+                </div>
+
+                <div class="metric" id="romMetric">
+                    <span class="metric-label" data-i18n="mcu_rom">Estimated MCU ROM (Flash):</span>
+                    <span class="metric-value" id="mcuRom">-</span>
+                </div>
+
+                <div class="metric" id="ramMetric">
+                    <span class="metric-label" data-i18n="mcu_ram">Estimated MCU RAM (Static):</span>
+                    <span class="metric-value" id="mcuRam">-</span>
+                </div>
                 
                 <div class="metric">
                     <span class="metric-label" data-i18n="num_samples">Number of Samples:</span>
@@ -581,6 +601,10 @@
                 mae: 'Mean Absolute Error (MAE):',
                 max_abs_error: 'Maximum Absolute Error:',
                 mse: 'Mean Squared Error (MSE):',
+                avg_time: 'Average Inference Time:',
+                max_time: 'Maximum Inference Time:',
+                mcu_rom: 'Estimated MCU ROM (Flash):',
+                mcu_ram: 'Estimated MCU RAM (Static):',
                 num_samples: 'Number of Samples:',
                 download_c_file: '📥 Download Generated C File',
                 download_main_file: '📄 Download Main File',
@@ -594,8 +618,8 @@
                 file_size_text: 'Size:',
                 file_type_text: 'Type:',
                 onnx_model: 'ONNX Model',
-                view_report: '📊 View Detailed Report',
-                examples_title: 'PyTorch Training Examples',
+                view_report: '📊 View Detailed Validation Report',
+                examples_title: 'Model Training Examples',
                 examples_subtitle: 'Download these examples to train and export your own models to ONNX',
                 mlp_desc: 'Multi-Layer Perceptron for classification',
                 cnn_desc: 'Convolutional Neural Network for images',
@@ -618,6 +642,10 @@
                 mae: '平均绝对误差 (MAE):',
                 max_abs_error: '最大绝对误差:',
                 mse: '均方误差 (MSE):',
+                avg_time: '平均推理时间:',
+                max_time: '最大推理时间:',
+                mcu_rom: '估算 MCU ROM (Flash):',
+                mcu_ram: '估算 MCU RAM (静态):',
                 num_samples: '测试样本数量:',
                 download_c_file: '📥 下载生成的 C 文件',
                 download_main_file: '📄 下载 Main 文件',
@@ -903,11 +931,23 @@
                 // Show metrics if available
                 if (validation.metrics && validation.metrics.overall_metrics) {
                     const metrics = validation.metrics.overall_metrics;
-                    document.getElementById('avgRelError').textContent = metrics.avg_relative_error.toExponential(2);
-                    document.getElementById('maxRelError').textContent = metrics.max_relative_error.toExponential(2);
-                    document.getElementById('mae').textContent = metrics.mae.toExponential(2);
-                    document.getElementById('maxAbsError').textContent = metrics.max_absolute_error.toExponential(2);
-                    document.getElementById('mse').textContent = metrics.mse.toExponential(2);
+                    document.getElementById('avgRelError').textContent = metrics.avg_relative_error.toExponential(4);
+                    document.getElementById('maxRelError').textContent = metrics.max_relative_error.toExponential(4);
+                    document.getElementById('mae').textContent = metrics.mae.toExponential(4);
+                    document.getElementById('maxAbsError').textContent = metrics.max_absolute_error.toExponential(4);
+                    document.getElementById('mse').textContent = metrics.mse.toExponential(4);
+                    
+                    // Update performance metrics
+                    if (metrics.avg_time !== undefined) {
+                        document.getElementById('avgTime').textContent = (metrics.avg_time * 1000).toFixed(4) + ' ms';
+                        document.getElementById('maxTime').textContent = (metrics.max_time * 1000).toFixed(4) + ' ms';
+                        
+                        if (metrics.mcu_rom !== undefined) {
+                            document.getElementById('mcuRom').textContent = (metrics.mcu_rom / 1024).toFixed(2) + ' KB';
+                            document.getElementById('mcuRam').textContent = (metrics.mcu_ram / 1024).toFixed(2) + ' KB';
+                        }
+                    }
+                    
                     document.getElementById('numSamples').textContent = `${metrics.num_samples} (${metrics.num_elements} elements)`;
                     
                     results.style.display = 'block';
@@ -918,11 +958,11 @@
                 // Fallback for old format
                 if (data.metrics) {
                     const metrics = data.metrics;
-                    document.getElementById('avgRelError').textContent = metrics.avg_relative_error.toFixed(8);
-                    document.getElementById('maxRelError').textContent = metrics.max_relative_error.toFixed(8);
-                    document.getElementById('mae').textContent = metrics.mae.toFixed(8);
-                    document.getElementById('maxAbsError').textContent = metrics.max_absolute_error.toFixed(8);
-                    document.getElementById('mse').textContent = metrics.mse.toFixed(8);
+                    document.getElementById('avgRelError').textContent = metrics.avg_relative_error.toExponential(4);
+                    document.getElementById('maxRelError').textContent = metrics.max_relative_error.toExponential(4);
+                    document.getElementById('mae').textContent = metrics.mae.toExponential(4);
+                    document.getElementById('maxAbsError').textContent = metrics.max_absolute_error.toExponential(4);
+                    document.getElementById('mse').textContent = metrics.mse.toExponential(4);
                     document.getElementById('numSamples').textContent = metrics.num_samples;
                     
                     results.style.display = 'block';
