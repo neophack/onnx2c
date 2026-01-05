@@ -480,7 +480,9 @@
                 {% for op_type, count in report.model_info.node_counts.items() %}
                 <div class="info-item">
                     <div class="info-label">{{ op_type }}</div>
-                    <div class="info-value" data-i18n="nodes">{{ count }} nodes</div>
+                    <div class="info-value">
+                        {{ count }} <span data-i18n="nodes">nodes</span>
+                    </div>
                 </div>
                 {% endfor %}
             </div>
@@ -525,20 +527,36 @@
             {% if report.validation.metrics.overall_metrics %}
             <div class="metrics-grid">
                 <div class="metric-card">
-                    <div class="metric-value">{{ "%.2e"|format(report.validation.metrics.overall_metrics.mae) }}</div>
+                    <div class="metric-value">{{ "%.4e"|format(report.validation.metrics.overall_metrics.mae) }}</div>
                     <div class="metric-label" data-i18n="mean_absolute_error">Mean Absolute Error</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-value">{{ "%.2e"|format(report.validation.metrics.overall_metrics.max_absolute_error) }}</div>
+                    <div class="metric-value">{{ "%.4e"|format(report.validation.metrics.overall_metrics.max_absolute_error) }}</div>
                     <div class="metric-label" data-i18n="max_absolute_error">Max Absolute Error</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-value">{{ "%.2e"|format(report.validation.metrics.overall_metrics.avg_relative_error) }}</div>
+                    <div class="metric-value">{{ "%.4e"|format(report.validation.metrics.overall_metrics.avg_relative_error) }}</div>
                     <div class="metric-label" data-i18n="avg_relative_error">Avg Relative Error</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-value">{{ "%.2e"|format(report.validation.metrics.overall_metrics.rmse) }}</div>
+                    <div class="metric-value">{{ "%.4e"|format(report.validation.metrics.overall_metrics.rmse) }}</div>
                     <div class="metric-label" data-i18n="rmse">Root Mean Square Error</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">{{ "%.4f"|format(report.validation.metrics.overall_metrics.avg_time * 1000) }} ms</div>
+                    <div class="metric-label" data-i18n="avg_time">Avg Inference Time</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">{{ "%.4f"|format(report.validation.metrics.overall_metrics.max_time * 1000) }} ms</div>
+                    <div class="metric-label" data-i18n="max_time">Max Inference Time</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">{{ "%.2f"|format(report.validation.metrics.overall_metrics.mcu_rom / 1024) }} KB</div>
+                    <div class="metric-label" data-i18n="mcu_rom">MCU ROM (Flash)</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">{{ "%.2f"|format(report.validation.metrics.overall_metrics.mcu_ram / 1024) }} KB</div>
+                    <div class="metric-label" data-i18n="mcu_ram">MCU RAM (Static)</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-value">{{ report.validation.metrics.overall_metrics.num_samples }}</div>
@@ -565,7 +583,7 @@
                         {% for percentile, error in report.validation.metrics.error_distribution.items() %}
                         <tr>
                             <td>{{ percentile }}</td>
-                            <td>{{ "%.2e"|format(error) }}</td>
+                            <td>{{ "%.4e"|format(error) }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -593,9 +611,9 @@
                         <tr>
                             <td>{{ outer_loop.index }}</td>
                             <td>{{ error.output_index }}</td>
-                            <td>{{ "%.2e"|format(error.mae) }}</td>
-                            <td>{{ "%.2e"|format(error.max_error) }}</td>
-                            <td>{{ "%.2e"|format(error.avg_rel_error) }}</td>
+                            <td>{{ "%.4e"|format(error.mae) }}</td>
+                            <td>{{ "%.4e"|format(error.max_error) }}</td>
+                            <td>{{ "%.4e"|format(error.avg_rel_error) }}</td>
                         </tr>
                         {% endfor %}
                         {% endfor %}
@@ -617,6 +635,27 @@
             </div>
         </div>
         {% endif %}
+
+        <!-- MCU Resource Advice -->
+        <div class="report-card">
+            <h2 class="section-title" data-i18n="mcu_timing_advice">⏱️ MCU Timing & Measurement Advice</h2>
+            <div style="line-height: 1.6; color: #e0e0e0;">
+                <p data-i18n="mcu_advice_intro">To accurately measure performance on ARM Cortex-M microcontrollers (like M3/M4/M7), it is recommended to use the hardware <b>DWT (Data Watchpoint and Trace)</b> cycle counter.</p>
+                <div class="code-block" style="background: #111; border-left: 4px solid #00f2ff; margin: 15px 0;">
+                    <pre style="margin: 0; color: #00f2ff;"><code>// 1. Enable DWT Cycle Counter
+CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+DWT->CYCCNT = 0;
+DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
+// 2. Measure
+uint32_t start = DWT->CYCCNT;
+model_inference(input, output);
+uint32_t end = DWT->CYCCNT;
+uint32_t cycles = end - start;</code></pre>
+                </div>
+                <p data-i18n="mcu_advice_outro">The estimated ROM and RAM shown above are based on static analysis of the generated model code (.o file). Actual usage may vary depending on your compiler settings (e.g., -Os vs -O3) and stack usage.</p>
+            </div>
+        </div>
 
         <!-- Generated Files -->
         {% if report.files %}
@@ -683,10 +722,17 @@
                 accuracy_metrics: '📊 Accuracy Metrics',
                 mean_absolute_error: 'Mean Absolute Error',
                 max_absolute_error: 'Max Absolute Error',
-                avg_relative_error: 'Avg Relative Error',
+                avg_rel_error: 'Avg Relative Error',
                 rmse: 'Root Mean Square Error',
+                avg_time: 'Avg Inference Time',
+                max_time: 'Max Inference Time',
+                mcu_rom: 'MCU ROM (Flash)',
+                mcu_ram: 'MCU RAM (Static)',
                 test_samples: 'Test Samples',
                 total_elements: 'Total Elements',
+                mcu_timing_advice: 'MCU Timing & Measurement Advice',
+                mcu_advice_intro: 'To accurately measure performance on ARM Cortex-M microcontrollers (like M3/M4/M7), it is recommended to use the hardware <b>DWT (Data Watchpoint and Trace)</b> cycle counter.',
+                mcu_advice_outro: 'The estimated ROM and RAM shown above are based on static analysis of the generated model code (.o file). Actual usage may vary depending on your compiler settings (e.g., -Os vs -O3) and stack usage.',
                 error_distribution: '📈 Error Distribution',
                 percentile: 'Percentile',
                 absolute_error: 'Absolute Error',
@@ -733,10 +779,17 @@
                 accuracy_metrics: '📊 准确度指标',
                 mean_absolute_error: '平均绝对误差',
                 max_absolute_error: '最大绝对误差',
-                avg_relative_error: '平均相对误差',
+                avg_rel_error: '平均相对误差',
                 rmse: '均方根误差',
+                avg_time: '平均推理时间',
+                max_time: '最大推理时间',
+                mcu_rom: 'MCU ROM (Flash)',
+                mcu_ram: 'MCU RAM (静态)',
                 test_samples: '测试样本',
                 total_elements: '总元素数',
+                mcu_timing_advice: '⏱️ MCU 时序和测量建议',
+                mcu_advice_intro: '为了准确测量 ARM Cortex-M 微控制器（如 M3/M4/M7）上的性能，建议使用硬件 <b>DWT (Data Watchpoint and Trace)</b> 周期计数器。',
+                mcu_advice_outro: '上方显示的估计 ROM 和 RAM 是基于生成的模型代码（.o 文件）的静态分析。实际使用情况可能因编译器设置（例如 -Os 与 -O3）和堆栈使用情况而异。',
                 error_distribution: '📈 误差分布',
                 percentile: '百分位数',
                 absolute_error: '绝对误差',
