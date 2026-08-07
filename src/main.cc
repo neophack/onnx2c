@@ -27,7 +27,7 @@ int main(int argc, const char* argv[])
 		ERROR("\"" << options.input_file << "\" is not a valid ONNX model");
 	}
 
-	std::cout.precision(20);
+	std::cout.precision(options.output_precision);
 	toC::Graph toCgraph(onnx_model);
 	if (options.opt_fold_casts)
 		toCgraph.fold_casts();
@@ -39,6 +39,6 @@ int main(int argc, const char* argv[])
 		toCgraph.print_initialization(std::cout);
 	}
 	else {
-		toCgraph.print_source(std::cout);
+		toCgraph.print_source(std::cout, options.interface_func_name);
 	}
 }

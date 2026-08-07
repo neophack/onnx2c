@@ -17,6 +17,7 @@ struct onnx2c_opts {
 	bool only_init = false;
 	bool opt_unionize = true;
 	bool opt_fold_casts = true;
+	int output_precision = 20;
 /*
  * logging levels are
  * cmd line     aixlog     Use
@@ -33,6 +34,7 @@ struct onnx2c_opts {
 #endif
 	int logging_level = DEFAULT_LOG_LEVEL; // Default level set by CMake. 1 in release, 4 in debug builds
 	std::string input_file;
+	std::string interface_func_name = "entry";
 	std::map<std::string, uint32_t> dim_defines;
 
 	// Save the raw command line arguments such that they can be printed

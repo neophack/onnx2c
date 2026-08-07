@@ -651,6 +651,17 @@ ONNX_backend_node_test(pow_types_int32_int32)
 ONNX_backend_node_test(prelu_broadcast)
 ONNX_backend_node_test(prelu_example)
 
+ONNX_backend_node_test(qlinearconv)
+
+ONNX_backend_node_test(qlinearmatmul_2D_int8_float16)
+ONNX_backend_node_test(qlinearmatmul_2D_int8_float32)
+ONNX_backend_node_test(qlinearmatmul_2D_uint8_float16)
+ONNX_backend_node_test(qlinearmatmul_2D_uint8_float32)
+ONNX_backend_node_test(qlinearmatmul_3D_int8_float16)
+ONNX_backend_node_test(qlinearmatmul_3D_int8_float32)
+ONNX_backend_node_test(qlinearmatmul_3D_uint8_float16)
+ONNX_backend_node_test(qlinearmatmul_3D_uint8_float32)
+
 ONNX_backend_node_test(or2d)
 ONNX_backend_node_test(or4d)
 ONNX_backend_node_test(or_bcast3v2d)
@@ -789,6 +800,12 @@ local_node_test(resize_downsample_sizes_linear_1D_align)
 
 local_node_test(qlinearadd_int8)
 local_node_test(qlinearadd_uint8)
+local_node_test(qgemm_int8_bias_per_output)
+local_node_test(qgemm_uint8_scalar_bias)
+local_node_test(qgemm_uint8_transB_row_bias)
+local_node_test(qlinearsoftmax_int8_2d)
+local_node_test(qlinearsoftmax_uint8_2d)
+local_node_test(qlinearsoftmax_uint8_3d_last_axis)
 local_node_test(qlinearmul_int8)
 local_node_test(qlinearmul_uint8)
 
@@ -922,8 +939,6 @@ ONNX_backend_node_test(xor3d)
 ONNX_backend_node_test(xor_bcast3v1d)
 ONNX_backend_node_test(xor_bcast4v2d)
 ONNX_backend_node_test(xor_bcast4v4d)
-
-
 
 add_subdirectory(old_onnx_backend)
 
