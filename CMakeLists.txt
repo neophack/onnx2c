@@ -14,13 +14,31 @@ set (CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEFAULT_LOG_LEVEL=4")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DDEFAULT_LOG_LEVEL=1")
 
+# WebAssembly builds need exception support throughout the dependency tree.
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fexceptions")
+endif()
+
 add_subdirectory(cmake_timestamp)
 
 
 # Disable protobuf tests and examples to speed up build
 set(protobuf_BUILD_TESTS OFF CACHE BOOL "Build tests" FORCE)
 set(protobuf_BUILD_EXAMPLES OFF CACHE BOOL "Build examples" FORCE)
+set(protobuf_WITH_ZLIB OFF CACHE BOOL "Build with zlib" FORCE)
+
+# For cross-compiled builds (e.g. Emscripten/WASM) the target protoc may be
+# a .js file that has trouble parsing Windows drive-letter paths. Provide an
+# option to use a host-native protoc instead.
+set(ONNX2C_PROTOC_EXECUTABLE "" CACHE FILEPATH "Path to host protoc executable for generating onnx.pb.cc/.h")
+
 add_subdirectory(protobuf)
+
+# Default to the in-tree protoc if no host protoc was provided and it exists.
+if(NOT ONNX2C_PROTOC_EXECUTABLE AND TARGET protobuf::protoc)
+	set(ONNX2C_PROTOC_EXECUTABLE protobuf::protoc)
+endif()
 
 # onnx2c_lib needs to see protobuf headers. 
 # While linking to protobuf::libprotobuf propagates usage requirements,
@@ -31,16 +49,18 @@ include_directories(src)
 
 add_custom_command(
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/onnx.pb.cc ${CMAKE_CURRENT_BINARY_DIR}/onnx.pb.h
-	COMMAND protobuf::protoc --proto_path=${CMAKE_CURRENT_SOURCE_DIR}/onnx/onnx/ --cpp_out=. ${CMAKE_CURRENT_SOURCE_DIR}/onnx/onnx/onnx.proto
+	COMMAND ${ONNX2C_PROTOC_EXECUTABLE} --proto_path=${CMAKE_CURRENT_SOURCE_DIR}/onnx/onnx/ --cpp_out=. ${CMAKE_CURRENT_SOURCE_DIR}/onnx/onnx/onnx.proto
 	MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/onnx/onnx/onnx.proto
-    DEPENDS protobuf::protoc
+	DEPENDS ${ONNX2C_PROTOC_EXECUTABLE}
 	)
 
 
 add_library(onnx2c_lib STATIC
+	src/convert.cc
 	src/graph.cc
 	src/graph_print.cc
 	src/node.cc
+	src/options.cc
 	src/tensor.cc
 	src/util.cc
 	src/optimization_passes/fold_casts.cpp
@@ -66,28 +86,70 @@ target_compile_options(onnx2c_lib
 		-I${CMAKE_CURRENT_BINARY_DIR}
 	PRIVATE
 		-I${CMAKE_CURRENT_SOURCE_DIR}/aixlog/include
+		-I${CMAKE_CURRENT_SOURCE_DIR}/args
 		-I${CMAKE_CURRENT_SOURCE_DIR}/cmake_timestamp
 		-Isrc
 		-Wall -Wfatal-errors
 	)
 
-add_executable( onnx2c
-	src/main.cc
-	src/options.cc
-	)
-target_compile_definitions(onnx2c PRIVATE UNICODE _UNICODE)
-target_compile_options(onnx2c
-	PRIVATE
-		-Isrc
-		-I${CMAKE_CURRENT_SOURCE_DIR}/aixlog/include
-		-I${CMAKE_CURRENT_SOURCE_DIR}/args
-		-Wall -Wfatal-errors
-	)
-target_link_libraries(onnx2c onnx2c_lib timestamp)
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+	add_executable( onnx2c
+		src/main.cc
+		)
+	target_compile_definitions(onnx2c PRIVATE UNICODE _UNICODE)
+	target_compile_options(onnx2c
+		PRIVATE
+			-Isrc
+			-I${CMAKE_CURRENT_SOURCE_DIR}/aixlog/include
+			-I${CMAKE_CURRENT_SOURCE_DIR}/args
+			-Wall -Wfatal-errors
+		)
+	target_link_libraries(onnx2c onnx2c_lib timestamp)
+endif()
 
-enable_testing()
-add_subdirectory(test)
+# WebAssembly build: produce a static, browser-loadable module.
+# Build with emcmake + emmake, e.g.:
+#   emcmake cmake -B build-wasm -S . -DCMAKE_BUILD_TYPE=Release
+#   emmake cmake --build build-wasm --target onnx2c_wasm
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+	add_executable(onnx2c_wasm
+		src/wasm_api.cc
+		)
+	target_compile_definitions(onnx2c_wasm PRIVATE UNICODE _UNICODE)
+	target_compile_options(onnx2c_wasm
+		PRIVATE
+			-Isrc
+			-I${CMAKE_CURRENT_SOURCE_DIR}/aixlog/include
+			-I${CMAKE_CURRENT_SOURCE_DIR}/args
+			-fexceptions
+		)
+	target_link_libraries(onnx2c_wasm onnx2c_lib timestamp)
+	set_target_properties(onnx2c_wasm PROPERTIES
+		SUFFIX ".js"
+		OUTPUT_NAME "onnx2c"
+		)
+	target_link_options(onnx2c_wasm
+		PRIVATE
+			-sMODULARIZE=1
+			-sEXPORT_NAME=createOnnx2cModule
+			-sALLOW_MEMORY_GROWTH=1
+			-sINITIAL_MEMORY=64MB
+			-sMAXIMUM_MEMORY=512MB
+			-sEXPORTED_RUNTIME_METHODS=['FS','ccall','cwrap','UTF8ToString','stringToUTF8','lengthBytesUTF8']
+			-sEXPORTED_FUNCTIONS=['_malloc','_free']
+			-sFILESYSTEM=1
+			-sENVIRONMENT=web
+			-fexceptions
+			--bind
+		)
+endif()
 
-# The Google Benchmark library-subrepo
-option(BENCHMARK_ENABLE_TESTING "Tests for the 'benchmark' subrepo" OFF)
-add_subdirectory(benchmark)
+# Unit tests and the benchmark subrepo are host-only targets.
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+	enable_testing()
+	add_subdirectory(test)
+
+	# The Google Benchmark library-subrepo
+	option(BENCHMARK_ENABLE_TESTING "Tests for the 'benchmark' subrepo" OFF)
+	add_subdirectory(benchmark)
+endif()

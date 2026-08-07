@@ -13,6 +13,59 @@
 
 ## 快速开始
 
+### 静态 WebAssembly 部署（无需后端）
+
+项目支持将 onnx2c 编译为 WebAssembly，直接部署为静态页面，不需要 Python 后端或 Docker。
+
+#### 环境要求
+
+- [Emscripten SDK](https://emscripten.org/)
+- CMake >= 3.13
+
+#### 构建步骤
+
+**Linux/macOS:**
+
+```bash
+# 安装并激活 Emscripten SDK
+git clone https://github.com/emscripten-core/emsdk.git
+cd emsdk
+./emsdk install latest
+./emsdk activate latest
+source ./emsdk_env.sh
+
+# 构建 WASM 模块
+cd ../onnx2c
+./scripts/build_wasm.sh
+```
+
+**Windows:**
+
+```cmd
+# 安装并激活 Emscripten SDK 后
+scripts\build_wasm.bat
+```
+
+构建完成后，`web_converter/wasm/` 目录下会生成：
+
+- `onnx2c.js`
+- `onnx2c.wasm`
+- `index.html`
+- `app.js`
+
+#### 部署
+
+使用任意静态文件服务器即可：
+
+```bash
+cd web_converter/wasm
+python3 -m http.server 8000
+```
+
+然后打开 `http://localhost:8000`，上传 ONNX 文件即可在浏览器中完成转换。
+
+> 注意：静态 WASM 版本目前只提供 ONNX 到 C 的转换，不包含模型验证功能。
+
 ### 使用 Docker Compose (推荐)
 
 ```bash
@@ -80,12 +133,15 @@ web_converter/
 ├── run.sh                  # Linux/macOS 启动脚本
 ├── run.bat                 # Windows 启动脚本
 ├── README.md              # 项目说明
-└── app/                   # Web 应用代码
-    ├── app.py             # Flask 主应用
-    ├── templates/         # HTML 模板
-    │   └── index.html     # 主页面
-    ├── uploads/           # 上传文件存储
-    └── generated/         # 生成文件存储
+├── app/                   # Web 应用代码（Flask 后端版）
+│   ├── app.py             # Flask 主应用
+│   ├── templates/         # HTML 模板
+│   │   └── index.html     # 主页面
+│   ├── uploads/           # 上传文件存储
+│   └── generated/         # 生成文件存储
+└── wasm/                  # 静态 WebAssembly 前端（无后端）
+    ├── index.html         # 主页面
+    └── app.js             # WASM 加载与转换逻辑
 ```
 
 ## 技术栈

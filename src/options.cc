@@ -197,6 +197,7 @@ void parse_cmdline_options(int argc, const char* argv[])
 		hint_at_help_and_exit();
 	}
 
+	options.command_line_args.clear();
 	options.command_line_args.reserve(argc);
 	for (int i = 0; i < argc; i++)
 		options.command_line_args.emplace_back(argv[i]);

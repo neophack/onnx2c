@@ -1,3 +1,11 @@
 build/
 .idea
 edge-impulse-sdk
+build-native-test/
+build-native-protoc/
+build-wasm/
+emsdk/
+web_converter/wasm/onnx2c.js
+web_converter/wasm/onnx2c.wasm
+build-wasm2/
+third_party/abseil-cpp/

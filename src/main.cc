@@ -2,17 +2,14 @@
  */
 #include <fstream>
 #include <iostream>
+#include <string>
+#include <vector>
 
-#include "onnx.pb.h"
-
-#include "graph.h"
+#include "convert.h"
 #include "options.h"
-#include "tensor.h"
 
 int main(int argc, const char* argv[])
 {
-	onnx::ModelProto onnx_model;
-
 	parse_cmdline_options(argc, argv);
 
 	std::ifstream input(options.input_file, std::ios::binary);
@@ -21,24 +18,16 @@ int main(int argc, const char* argv[])
 		exit(1); //	TODO: check out error numbers for a more accurate one
 	}
 	if (input.peek() == EOF) {
-		ERROR("\"" << options.input_file << "\" is empty");
-	}
-	if (!onnx_model.ParseFromIstream(&input)) {
-		ERROR("\"" << options.input_file << "\" is not a valid ONNX model");
+		std::cerr << "\"" << options.input_file << "\" is empty" << std::endl;
+		exit(1);
 	}
 
-	std::cout.precision(options.output_precision);
-	toC::Graph toCgraph(onnx_model);
-	if (options.opt_fold_casts)
-		toCgraph.fold_casts();
-	if (options.opt_unionize)
-		toCgraph.unionize_tensors();
-	toCgraph.set_no_globals(options.no_globals);
+	std::string onnx_bytes((std::istreambuf_iterator<char>(input)),
+	    std::istreambuf_iterator<char>());
 
-	if (options.only_init) {
-		toCgraph.print_initialization(std::cout);
-	}
-	else {
-		toCgraph.print_source(std::cout, options.interface_func_name);
-	}
+	std::vector<std::string> args;
+	for (int i = 1; i < argc; ++i)
+		args.emplace_back(argv[i]);
+
+	std::cout << convert_onnx_to_c(onnx_bytes, args);
 }
