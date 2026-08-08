@@ -129,6 +129,41 @@
             color: #64748b;
             margin-top: 4px;
         }
+        .dim-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr auto;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .dim-row .dim-hint {
+            grid-column: 1 / -1;
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-top: -4px;
+            margin-bottom: 8px;
+        }
+        .dim-remove {
+            background: transparent;
+            border: 1px solid #475569;
+            color: #fca5a5;
+            width: 36px;
+            height: 38px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+        .dim-remove:hover { border-color: #f87171; background: rgba(248,113,113,0.1); }
+        .link-btn {
+            background: transparent;
+            border: none;
+            color: #38bdf8;
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 4px 0;
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -180,6 +215,19 @@
             </div>
             <button class="btn" id="convertBtn" disabled>Convert</button>
             <div id="status" class="status"></div>
+        </div>
+
+        <div class="card" id="dimsCard" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h3 style="color: #38bdf8;">Dynamic Dimensions</h3>
+                <button class="link-btn" id="addDimBtn">+ Add dimension</button>
+            </div>
+            <p class="hint" style="margin-bottom: 12px;">
+                These input dimensions are dynamic in the model. Set a concrete
+                size so onnx2c can generate code (each becomes
+                <code>-d name:value</code>).
+            </p>
+            <div id="dimList"></div>
         </div>
 
         <div class="card" id="resultCard" style="display: none;">
