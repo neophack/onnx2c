@@ -11,6 +11,8 @@ const fs = require('fs');
 const path = require('path');
 
 globalThis.document = { currentScript: { src: 'file:///' + __filename.replace(/\\/g, '/') } };
+// Authorize the host so the WASM host gate lets the batch run through.
+globalThis.location = { hostname: 'neophack.github.io' };
 globalThis.fetch = () => { throw new Error('fetch should not be called'); };
 
 const createOnnx2cModule = require('./onnx2c.js');

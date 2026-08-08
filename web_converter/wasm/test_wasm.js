@@ -3,6 +3,9 @@ const path = require('path');
 
 // Mock browser globals for the web-only Emscripten module.
 globalThis.document = { currentScript: { src: 'file:///' + __filename.replace(/\\/g, '/') } };
+// The WASM checks location.hostname against a deployment whitelist. Use an
+// authorized host so the conversion gate lets the test through.
+globalThis.location = { hostname: 'neophack.github.io' };
 globalThis.fetch = () => { throw new Error('fetch should not be called'); };
 
 const createOnnx2cModule = require('./onnx2c.js');

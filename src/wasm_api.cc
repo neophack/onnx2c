@@ -13,8 +13,32 @@
 #include <emscripten/val.h>
 
 #include "convert.h"
+#include "host_check.h"
 
 using namespace emscripten;
+
+// Exposed to JS so the frontend can preflight the host (and redirect) as
+// soon as the module is ready, without waiting for a conversion attempt.
+bool check_host_allowed()
+{
+	return onnx2c::current_host_allowed();
+}
+
+// Return the canonical deployment URL. JS uses this to redirect visitors on
+// unauthorized hosts, so the target lives in the WASM (host_check.h), not in
+// the JS source.
+std::string get_canonical_site()
+{
+	return onnx2c::CANONICAL_SITE;
+}
+
+// Return the marker prefix that convert_onnx_bytes prepends to its error
+// string when the host is blocked. JS matches this prefix to detect the
+// block instead of hardcoding the string.
+std::string get_host_blocked_marker()
+{
+	return onnx2c::HOST_BLOCKED_MARKER;
+}
 
 /* Convert raw ONNX bytes (passed as a JS Uint8Array) to generated C source code.
  *
@@ -27,6 +51,13 @@ using namespace emscripten;
 std::string convert_onnx_bytes(const emscripten::val& onnx_bytes,
     const std::vector<std::string>& args)
 {
+	// Gate: refuse to run on unauthorized deployment domains. This check
+	// lives inside the WASM binary so copying the frontend elsewhere cannot
+	// produce working code even if the JS redirect is removed. The whitelist
+	// and matching logic live in host_check.h.
+	if (!onnx2c::current_host_allowed())
+		return onnx2c::HOST_BLOCKED_ERROR;
+
 	// Read the JS Uint8Array directly into a C++ string without going through
 	// JS string UTF-8 encoding, which would corrupt binary protobuf data.
 	unsigned int length = onnx_bytes["length"].as<unsigned int>();
@@ -44,6 +75,9 @@ std::string convert_onnx_bytes(const emscripten::val& onnx_bytes,
 
 EMSCRIPTEN_BINDINGS(onnx2c_module) {
 	function("convertOnnxBytes", &convert_onnx_bytes);
+	function("checkHostAllowed", &check_host_allowed);
+	function("getCanonicalSite", &get_canonical_site);
+	function("getHostBlockedMarker", &get_host_blocked_marker);
 	register_vector<std::string>("StringVector");
 }
 

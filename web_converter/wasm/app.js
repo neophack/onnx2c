@@ -22,6 +22,44 @@ const dimsCard = document.getElementById('dimsCard');
 const dimList = document.getElementById('dimList');
 const addDimBtn = document.getElementById('addDimBtn');
 
+/* The canonical deployment URL and the host-blocked marker are NOT hardcoded
+ * here -- they live inside the WASM (see src/host_check.h) and are fetched at
+ * runtime via module.getCanonicalSite() / module.getHostBlockedMarker(). This
+ * keeps a single source of truth: change the whitelist/redirect target in
+ * host_check.h, rebuild, and the JS picks it up automatically. */
+
+/* Redirect to the canonical site. The redirect target comes from the WASM
+ * module; the real gate also lives in the WASM binary (convertOnnxBytes
+ * returns the blocked marker). This is the user-facing half that sends
+ * visitors to the right place. */
+function redirectToCanonicalSite(module) {
+    const m = module || onnx2cModule;
+    try {
+        const target = (m && typeof m.getCanonicalSite === 'function')
+            ? m.getCanonicalSite()
+            : null;
+        if (target) window.location.replace(target);
+    } catch (e) { /* ignore */ }
+}
+
+/* Preflight: once the WASM module is ready, ask it whether this host is
+ * allowed. If not, leave immediately. Safe to call multiple times. */
+function ensureHostAllowed(module) {
+    const m = module || onnx2cModule;
+    try {
+        if (m && typeof m.checkHostAllowed === 'function' && !m.checkHostAllowed()) {
+            redirectToCanonicalSite(m);
+            return false;
+        }
+    } catch (e) {
+        // If the check itself fails (e.g. tampered module), fall back to
+        // redirecting rather than silently allowing.
+        redirectToCanonicalSite(m);
+        return false;
+    }
+    return true;
+}
+
 /* ------------------------------------------------------------------ *
  * Minimal protobuf reader for ONNX ModelProto.
  *
@@ -336,6 +374,12 @@ async function loadModule() {
                 conversionLogs.push(text);
             }
         });
+        // Gate: the WASM knows which hosts are authorized. Redirect away
+        // immediately if this site is not whitelisted, before any work.
+        if (!ensureHostAllowed(onnx2cModule)) {
+            showStatus('This deployment is not authorized. Redirecting...', 'error');
+            throw new Error('host not allowed');
+        }
         hideStatus();
         return onnx2cModule;
     } catch (err) {
@@ -363,6 +407,17 @@ async function convert() {
         args.forEach(a => argVector.push_back(a));
 
         const result = module.convertOnnxBytes(currentOnnxBytes, argVector);
+        // Defense in depth: the WASM returns the blocked marker for
+        // unauthorized hosts even if the JS preflight was somehow bypassed.
+        // The marker prefix is fetched from the module rather than hardcoded.
+        const blockedMarker = typeof module.getHostBlockedMarker === 'function'
+            ? module.getHostBlockedMarker()
+            : '';
+        if (blockedMarker && typeof result === 'string' && result.startsWith(blockedMarker)) {
+            showStatus('This deployment is not authorized. Redirecting...', 'error');
+            redirectToCanonicalSite(module);
+            return;
+        }
         lastGeneratedCode = result;
 
         codeOutput.textContent = result;
